@@ -336,7 +336,8 @@ class socksocket(socket.socket):
         # If we need to resolve locally, we do this now
         addr = dest_addr if rdns else socket.gethostbyname(dest_addr)
 
-        self.sendall(b"CONNECT " + addr.encode() + b":" + str(dest_port).encode() + b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode() + b"\r\n\r\n")
+        self.sendall(b"CONNECT " + addr.encode() + b":" + str(dest_port).encode() + 
+                     b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode() + b"\r\n\r\n")
         
         resp = self.recv(4096)
         while b"\r\n\r\n" not in resp and b"\n\n" not in resp:
