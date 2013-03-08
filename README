@@ -8,6 +8,8 @@ urllib3, which powers the requests module, is working on integrating SOCKS proxy
 
 SOCKS5, SOCKS4, and HTTP are now aliases for PROXY_TYPE_SOCKS5/SOCKS4/HTTP
 
+Warning: PySocks/SocksiPy only supports HTTP proxies that use CONNECT tunneling. Certain HTTP proxies may not work with this library.
+
 ############
 
 (Original SocksiPy README below)
