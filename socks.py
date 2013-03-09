@@ -102,6 +102,20 @@ def wrapmodule(module):
     else:
         raise GeneralProxyError("No default proxy specified")
 
+def create_connection(address, proxy_type=None, proxy_host=None, 
+                      proxy_port=None, timeout=None, **kwargs):
+    sock = socksocket()
+    if isinstance(timeout, (int, float)):
+        sock.settimeout(timeout)
+    try:
+        sock.setproxy(proxy_type, proxy_host, proxy_port)
+        sock.connect(address)
+        return sock
+    except socket.error:
+        if sock:
+            sock.close()
+        raise
+
 class socksocket(socket.socket):
     """socksocket([family[, type[, proto]]]) -> socket object
     Open a SOCKS enabled socket. The parameters are the same as
