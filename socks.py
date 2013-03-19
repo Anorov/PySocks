@@ -37,16 +37,17 @@ Minor modifications made by Mario Vilas (http://breakingcode.wordpress.com/)
 mainly to merge bug fixes found in Sourceforge
 
 Modifications made by Anorov (https://github.com/Anorov)
--Named branch to PySocks
+-Renamed to PySocks
 -Fixed issue with HTTP proxy failure checking (same bug that was in the old __recvall() method)
+-Included SocksiPyHandler (sockshandler.py), to be used as a urllib2 handler, 
+ courtesy of e000 (https://github.com/e000): https://gist.github.com/869791#file_socksipyhandler.py
 -Re-styled code to make it readable
     -Aliased PROXY_TYPE_SOCKS5 -> SOCKS5 etc.
     -Improved exception handling and output
     -Removed irritating use of sequence indexes, replaced with tuple unpacked variables
     -Fixed up Python 3 bytestring handling - chr(0x03).encode() -> b"\x03"
-    -Other general style fixes
--Included SocksiPyHandler (sockshandler.py), to be used as a urllib2 handler, 
- courtesy of e000 (https://github.com/e000): https://gist.github.com/869791#file_socksipyhandler.py
+    -Other general fixes
+-Added clarification that the HTTP proxy connection method only supports CONNECT-style tunneling HTTP proxies
 """
 import socket
 import struct
@@ -81,7 +82,7 @@ SOCKS5errors = { 0x01: "General SOCKS server failure",
                }
 
 def setdefaultproxy(proxytype=None, addr=None, port=None, rdns=True, username=None, password=None):
-    """setdefaultproxy(proxytype, addr[, port[, rdns[, username[, password]]]])
+    """setdefaultproxy(proxytype, addr[, port[, rdns[, username, password]]])
     Sets a default proxy which all further socksocket objects will use,
     unless explicitly changed.
     """
@@ -97,7 +98,7 @@ def wrapmodule(module):
     This will only work on modules that import socket directly into the namespace;
     most of the Python Standard Library falls into this category.
     """
-    if defaultproxy is not None:
+    if defaultproxy:
         module.socket.socket = socksocket
     else:
         raise GeneralProxyError("No default proxy specified")
@@ -107,14 +108,9 @@ def create_connection(address, proxy_type=None, proxy_host=None,
     sock = socksocket()
     if isinstance(timeout, (int, float)):
         sock.settimeout(timeout)
-    try:
-        sock.setproxy(proxy_type, proxy_host, proxy_port)
-        sock.connect(address)
-        return sock
-    except socket.error:
-        if sock:
-            sock.close()
-        raise
+    sock.setproxy(proxy_type, proxy_host, proxy_port)
+    sock.connect(address)
+    return sock
 
 class socksocket(socket.socket):
     """socksocket([family[, type[, proto]]]) -> socket object
@@ -124,7 +120,7 @@ class socksocket(socket.socket):
     """
     def __init__(self, family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, _sock=None):
         _orgsocket.__init__(self, family, type, proto, _sock)
-        if defaultproxy is not None:
+        if defaultproxy:
             self.proxy = defaultproxy
         else:
             self.proxy = (None, None, None, None, None, None)
@@ -195,11 +191,11 @@ class socksocket(socket.socket):
             # The username/password details were supplied to the
             # setproxy method so we support the USERNAME/PASSWORD
             # authentication (in addition to the standard none).
-            self.sendall(struct.pack("BBBB", 0x05, 0x02, 0x00, 0x02))
+            self.sendall(b"\x05\x02\x00\x02")
         else:
             # No username/password were entered, therefore we
             # only support connections with no authentication.
-            self.sendall(struct.pack("BBB", 0x05, 0x01, 0x00))
+            self.sendall(b"\x05\x01\x00")
         
         # We'll receive the server's response to determine which
         # method was selected
@@ -209,7 +205,7 @@ class socksocket(socket.socket):
             # Note: string[i:i+1] is used because indexing of a bytestring 
             # via bytestring[i] yields an integer in Python 3
             self.close()
-            raise GeneralProxyError("Proxy server sent invalid data")
+            raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
         # Check the chosen authentication method
         if chosenauth[1:2] == b"\x00":
             # No authentication is required
@@ -222,7 +218,7 @@ class socksocket(socket.socket):
             if authstat[0:1] != b"\x01":
                 # Bad response
                 self.close()
-                raise GeneralProxyError("Proxy server sent invalid data")
+                raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
             if authstat[1:2] != b"\x00":
                 # Authentication failed
                 self.close()
@@ -234,10 +230,10 @@ class socksocket(socket.socket):
             if chosenauth[1:2] == b"\xFF":
                 raise SOCKS5AuthError("All offered SOCKS5 authentication methods were rejected")
             else:
-                raise GeneralProxyError("Proxy server sent invalid data")
+                raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
         
         # Now we can request the actual connection
-        req = struct.pack("BBB", 0x05, 0x01, 0x00)
+        req = b"\x05\x01\x00"
         # If the given destination address is an IP address, we'll
         # use the IPv4 address request even if remote resolving was specified.
         try:
@@ -260,12 +256,12 @@ class socksocket(socket.socket):
         resp = self.recvall(4)
         if resp[0:1] != b"\x05":
             self.close()
-            raise GeneralProxyError("Proxy server sent invalid data")
+            raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
         elif resp[1:2] != b"\x00":
             # Connection failed
             self.close()
             if ord(resp[1:2]) <= 8:
-                raise SOCKS5Error("{:#x}: {}".format(ord(resp[1:2]), SOCKS5errors[ord(resp[1:2])]))
+                raise SOCKS5Error("{:#04x}: {}".format(ord(resp[1:2]), SOCKS5errors[ord(resp[1:2])]))
             else:
                 raise SOCKS5Error("Unknown error")
         
@@ -273,14 +269,15 @@ class socksocket(socket.socket):
         elif resp[3:4] == b"\x01":
             boundaddr = self.recvall(4)
         elif resp[3:4] == b"\x03":
-            resp = resp + self.recv(1)
+            resp += self.recv(1)
             boundaddr = self.recvall(ord(resp[4:5]))
         else:
             self.close()
-            raise GeneralProxyError("Proxy server sent invalid data")
+            raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
+        
         boundport = struct.unpack(">H", self.recvall(2))[0]
         self.proxysockname = boundaddr, boundport
-        if addr_bytes is not None:
+        if addr_bytes:
             self.proxypeername = socket.inet_ntoa(addr_bytes), dest_port
         else:
             self.proxypeername = dest_addr, dest_port
@@ -298,7 +295,7 @@ class socksocket(socket.socket):
         except socket.error:
             # It's a DNS name. Check where it should be resolved.
             if rdns:
-                addr_bytes = struct.pack("BBBB", 0x00, 0x00, 0x00, 0x01)
+                addr_bytes = b"\x00\x00\x00\x01"
                 rmtrslv = True
             else:
                 addr_bytes = socket.inet_aton(socket.gethostbyname(dest_addr))
@@ -307,7 +304,7 @@ class socksocket(socket.socket):
         req = struct.pack(">BBH", 0x04, 0x01, dest_port) + addr_bytes
         
         # The username parameter is considered userid for SOCKS4
-        if username is not None:
+        if username:
             req += username
         req += b"\x00"
         
@@ -323,19 +320,19 @@ class socksocket(socket.socket):
         if resp[0:1] != b"\x00":
             # Bad data
             self.close()
-            raise GeneralProxyError("Proxy server sent invalid data")
+            raise GeneralProxyError("SOCKS4 proxy server sent invalid data")
         if resp[1:2] != b"\x5A":
             # Server returned an error
             self.close()
             if resp[1:2] in (b"\x5B", b"\x5C", b"\x5D"):
                 self.close()
-                raise SOCKS4Error("{:#x}: {}".format(ord(resp[1:2]), SOCKS4errors[ord(resp[1:2])]))
+                raise SOCKS4Error("{:#04x}: {}".format(ord(resp[1:2]), SOCKS4errors[ord(resp[1:2])]))
             else:
                 raise SOCKS4Error("Unknown error")
         
         # Get the bound address/port
         self.proxysockname = (socket.inet_ntoa(resp[4:]), struct.unpack(">H", resp[2:4])[0])
-        if rmtrslv is not None:
+        if rmtrslv :
             self.proxypeername = socket.inet_ntoa(addr_bytes), dest_port
         else:
             self.proxypeername = dest_addr, dest_port
@@ -369,7 +366,7 @@ class socksocket(socket.socket):
             statuscode = int(statusline[1])
         except ValueError:
             self.close()
-            raise GeneralProxyError("HTTP proxy server did not return a valid HTTP status")
+            raise HTTPError("HTTP proxy server did not return a valid HTTP status")
         if statuscode != 200:
             self.close()
             error = "{}: {}".format(statuscode, statusline[2].decode())
@@ -395,29 +392,34 @@ class socksocket(socket.socket):
         if (not isinstance(destpair, (list, tuple)) or len(destpair) != 2
             or not isinstance(dest_addr, type("")) or not isinstance(dest_port, int)):
             raise GeneralProxyError("Invalid destination-connection tuple pair")
-
-        if proxytype == PROXY_TYPE_SOCKS5:
-            if port is not None:
-                portnum = port
+        try:
+            if proxytype == PROXY_TYPE_SOCKS5:
+                if port is not None:
+                    portnum = port
+                else:
+                    portnum = 1080 # default SOCKS proxy port
+                _orgsocket.connect(self, (addr, portnum))
+                self._negotiateSOCKS5(dest_addr, dest_port)
+            elif proxytype == PROXY_TYPE_SOCKS4:
+                if port is not None:
+                    portnum = port
+                else:
+                    portnum = 1080 # default SOCKS proxy port
+                _orgsocket.connect(self, (addr, portnum))
+                self._negotiateSOCKS4(dest_addr, dest_port)
+            elif proxytype == PROXY_TYPE_HTTP:
+                if port is not None:
+                    portnum = port
+                else:
+                    portnum = 8080 # default HTTP proxy port
+                _orgsocket.connect(self, (addr, portnum))
+                self._negotiateHTTP(dest_addr, dest_port)
+            elif proxytype is None:
+                _orgsocket.connect(self, (dest_addr, dest_port))
             else:
-                portnum = 1080 # default SOCKS proxy port
-            _orgsocket.connect(self, (addr, portnum))
-            self._negotiateSOCKS5(dest_addr, dest_port)
-        elif proxytype == PROXY_TYPE_SOCKS4:
-            if port is not None:
-                portnum = port
-            else:
-                portnum = 1080 # default SOCKS proxy port
-            _orgsocket.connect(self, (addr, portnum))
-            self._negotiateSOCKS4(dest_addr, dest_port)
-        elif proxytype == PROXY_TYPE_HTTP:
-            if port is not None:
-                portnum = port
-            else:
-                portnum = 8080 # default HTTP proxy port
-            _orgsocket.connect(self, (addr, portnum))
-            self._negotiateHTTP(dest_addr, dest_port)
-        elif proxytype is None:
-            _orgsocket.connect(self, (dest_addr, dest_port))
-        else:
-            raise GeneralProxyError("Invalid proxy type")
+                raise GeneralProxyError("Invalid proxy type")
+        except socket.error as error:
+            self.close()
+            errno, msg = error.args
+            msg = "Proxy connection error: {}".format(msg)
+            raise socket.error(errno, msg)
