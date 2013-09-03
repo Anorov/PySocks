@@ -104,11 +104,12 @@ def wrapmodule(module):
         raise GeneralProxyError("No default proxy specified")
 
 def create_connection(address, proxy_type=None, proxy_host=None, 
-                      proxy_port=None, timeout=None, **kwargs):
+                      proxy_port=None, proxy_username=None,
+                      proxy_password=None, timeout=None):
     sock = socksocket()
     if isinstance(timeout, (int, float)):
         sock.settimeout(timeout)
-    sock.setproxy(proxy_type, proxy_host, proxy_port)
+    sock.setproxy(proxy_type, proxy_host, proxy_port, proxy_username, proxy_password)
     sock.connect(address)
     return sock
 
@@ -332,7 +333,7 @@ class socksocket(socket.socket):
         
         # Get the bound address/port
         self.proxysockname = (socket.inet_ntoa(resp[4:]), struct.unpack(">H", resp[2:4])[0])
-        if rmtrslv :
+        if rmtrslv:
             self.proxypeername = socket.inet_ntoa(addr_bytes), dest_port
         else:
             self.proxypeername = dest_addr, dest_port
