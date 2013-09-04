@@ -12,9 +12,9 @@ Warning: PySocks/SocksiPy only supports HTTP proxies that use CONNECT tunneling.
 
 ############
 
-(Original SocksiPy README below)
+(Original SocksiPy README below, amended to reflect API changes)
 
-SocksiPy version 1.20
+SocksiPy version 1.3
 A Python SOCKS module.
 (C) 2006 Dan-Haim. All rights reserved.
 See LICENSE file for details.
@@ -70,16 +70,16 @@ Generally, it is best to initialize the socksocket object with no parameters
 
 The socksocket object has an interface which is very similiar to socket's (in fact
 the socksocket class is derived from socket) with a few extra methods.
-To select the proxy server you would like to use, use the setproxy method, whose
+To select the proxy server you would like to use, use the set_proxy method, whose
 syntax is:
 
-setproxy(proxytype, addr[, port[, rdns[, username[, password]]]])
+set_proxy(proxy_type, addr[, port[, rdns[, username[, password]]]])
 
-Explaination of the parameters:
+Explanation of the parameters:
 
-proxytype - The type of the proxy server. This can be one of three possible
+proxy_type - The type of the proxy server. This can be one of three possible
 choices: PROXY_TYPE_SOCKS4, PROXY_TYPE_SOCKS5 and PROXY_TYPE_HTTP for Socks4,
-Socks5 and HTTP servers respectively.
+Socks5 and HTTP servers respectively. SOCKS4, SOCKS5, and HTTP are all aliases, respectively.
 
 addr - The IP address or DNS name of the proxy server.
 
@@ -102,17 +102,17 @@ respective password for the username provided.
 
 Example of usage:
 
->>> s.setproxy(socks.PROXY_TYPE_SOCKS5,"socks.example.com")
+>>> s.set_proxy(socks.PROXY_TYPE_SOCKS5,"socks.example.com")
 >>>
 
-After the setproxy method has been called, simply call the connect method with the
+After the set_proxy method has been called, simply call the connect method with the
 traditional parameters to establish a connection through the proxy:
 
 >>> s.connect(("www.sourceforge.net",80))
 >>>
 
 Connection will take a bit longer to allow negotiation with the proxy server.
-Please note that calling connect without calling setproxy earlier will connect
+Please note that calling connect without calling set_proxy earlier will connect
 without a proxy (just like a regular socket).
 
 Errors: Any errors in the connection process will trigger exceptions. The exception
@@ -130,7 +130,7 @@ description of the error, from the following list:
 the server. The most common reason is that the server specified as the proxy is
 not really a Socks4/Socks5/HTTP proxy, or maybe the proxy type specified is wrong.
 4 - bad proxy type - This will be raised if the type of the proxy supplied to the
-setproxy function was not PROXY_TYPE_SOCKS4/PROXY_TYPE_SOCKS5/PROXY_TYPE_HTTP.
+set_proxy function was not PROXY_TYPE_SOCKS4/PROXY_TYPE_SOCKS5/PROXY_TYPE_HTTP.
 5 - bad input - This will be raised if the connect method is called with bad input
 parameters.
 
@@ -179,7 +179,7 @@ connections to local port 113 from the remote server.
 3 - request rejected because the client program and identd report different user-ids - 
 The Socks server had performed an ident lookup on your computer and has received a
 different userid than the one you have provided. Change your userid (through the
-username parameter of the setproxy method) to match and try again.
+username parameter of the set_proxy method) to match and try again.
 
 class HTTPError - This will be raised for HTTP errors. The parameter is a tuple
 containing the HTTP status code and the description of the server.
@@ -189,14 +189,14 @@ After establishing the connection, the object behaves like a standard socket.
 Call the close method to close the connection.
 
 In addition to the socksocket class, an additional function worth mentioning is the
-setdefaultproxy function. The parameters are the same as the setproxy method.
+set_default_proxy function. The parameters are the same as the set_proxy method.
 This function will set default proxy settings for newly created socksocket objects,
-in which the proxy settings haven't been changed via the setproxy method.
+in which the proxy settings haven't been changed via the set_proxy method.
 This is quite useful if you wish to force 3rd party modules to use a socks proxy,
 by overriding the socket object.
 For example:
 
->>> socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5,"socks.example.com")
+>>> socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5,"socks.example.com")
 >>> socket.socket = socks.socksocket
 >>> urllib.urlopen("http://www.sourceforge.net/")
 

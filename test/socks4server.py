@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from twisted.internet import reactor
 from twisted.protocols.socks import SOCKSv4Factory
 

@@ -21,7 +21,7 @@ def raw_HTTP_request():
 
 def socket_HTTP_test():
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_HTTP, "127.0.0.1", 8080)
+    s.set_proxy(socks.HTTP, "127.0.0.1", 8080)
     s.connect(("api.externalip.net", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
@@ -29,7 +29,7 @@ def socket_HTTP_test():
 
 def socket_SOCKS4_test():
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_SOCKS4, "127.0.0.1", 1080)
+    s.set_proxy(socks.SOCKS4, "127.0.0.1", 1080)
     s.connect(("api.externalip.net", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
@@ -37,7 +37,7 @@ def socket_SOCKS4_test():
 
 def socket_SOCKS5_test():
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 1081)
+    s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081)
     s.connect(("api.externalip.net", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
@@ -46,7 +46,7 @@ def socket_SOCKS5_test():
 def socket_SOCKS5_auth_test():
     # TODO: add support for this test. Will need a better SOCKS5 server.
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 1081, username="a", password="b")
+    s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081, username="a", password="b")
     s.connect(("api.externalip.net", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
@@ -54,60 +54,60 @@ def socket_SOCKS5_auth_test():
 
 def socket_HTTP_IP_test():
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_HTTP, "127.0.0.1", 8080)
-    s.connect(("109.74.3.220", 80))
+    s.set_proxy(socks.HTTP, "127.0.0.1", 8080)
+    s.connect(("95.211.60.37", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
     assert status.startswith(b"HTTP/1.1 200")
 
 def socket_SOCKS4_IP_test():
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_SOCKS4, "127.0.0.1", 1080)
-    s.connect(("109.74.3.220", 80))
+    s.set_proxy(socks.SOCKS4, "127.0.0.1", 1080)
+    s.connect(("95.211.60.37", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
     assert status.startswith(b"HTTP/1.1 200")
 
 def socket_SOCKS5_IP_test():
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 1081)
-    s.connect(("109.74.3.220", 80))
+    s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081)
+    s.connect(("95.211.60.37", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
     assert status.startswith(b"HTTP/1.1 200")
 
 def socket_SOCKS4_test():
     s = socks.socksocket()
-    s.setproxy(socks.PROXY_TYPE_SOCKS4, "127.0.0.1", 1080)
+    s.set_proxy(socks.SOCKS4, "127.0.0.1", 1080)
     s.connect(("api.externalip.net", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
     assert status.startswith(b"HTTP/1.1 200")
 
 def urllib2_HTTP_test():
-    socks.setdefaultproxy(socks.PROXY_TYPE_HTTP, "127.0.0.1", 8080)
-    socks.wrapmodule(urllib2)
+    socks.set_default_proxy(socks.HTTP, "127.0.0.1", 8080)
+    socks.wrap_module(urllib2)
     status = urllib2.urlopen("http://api.externalip.net/ip/").getcode()
     assert status == 200
 
 def urllib2_SOCKS5_test():
-    socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 1081)
-    socks.wrapmodule(urllib2)
+    socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 1081)
+    socks.wrap_module(urllib2)
     status = urllib2.urlopen("http://api.externalip.net/ip/").getcode()
     assert status == 200
 
 def urllib2_handler_HTTP_test():
-    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_HTTP, "127.0.0.1", 8080))
+    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.HTTP, "127.0.0.1", 8080))
     status = opener.open("http://api.externalip.net/ip/").getcode()
     assert status == 200
 
 def urllib2_handler_SOCKS5_test():
-    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 1081))
+    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.SOCKS5, "127.0.0.1", 1081))
     status = opener.open("http://api.externalip.net/ip/").getcode()
     assert status == 200
 
 def global_override_HTTP_test():
-    socks.setdefaultproxy(socks.PROXY_TYPE_HTTP, "127.0.0.1", 8080)
+    socks.set_default_proxy(socks.HTTP, "127.0.0.1", 8080)
     good = socket.socket
     socket.socket = socks.socksocket
     status = urllib2.urlopen("http://api.externalip.net/ip/").getcode()
@@ -115,7 +115,7 @@ def global_override_HTTP_test():
     assert status == 200
 
 def global_override_SOCKS5_test():
-    socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 1081)
+    socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 1081)
     good = socket.socket
     socket.socket = socks.socksocket
     status = urllib2.urlopen("http://api.externalip.net/ip/").getcode()
