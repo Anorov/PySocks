@@ -84,7 +84,7 @@ SOCKS5errors = { 0x01: "General SOCKS server failure",
                }
 
 def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username=None, password=None):
-    """setdefault_proxy(proxy_type, addr[, port[, rdns[, username, password]]])
+    """set_default_proxy(proxy_type, addr[, port[, rdns[, username, password]]])
     Sets a default proxy which all further socksocket objects will use,
     unless explicitly changed.
     """
@@ -95,10 +95,15 @@ def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username
 
 setdefaultproxy = set_default_proxy
 
+def get_default_proxy():
+    return socksocket.default_proxy
+
+getdefaultproxy = get_default_proxy
+
 def wrap_module(module):
     """wrap_module(module)
     Attempts to replace a module's socket library with a SOCKS socket. Must set
-    a default proxy using setdefault_proxy(...) first.
+    a default proxy using set_default_proxy(...) first.
     This will only work on modules that import socket directly into the namespace;
     most of the Python Standard Library falls into this category.
     """

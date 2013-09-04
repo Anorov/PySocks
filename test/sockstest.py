@@ -115,12 +115,15 @@ def global_override_HTTP_test():
     assert status == 200
 
 def global_override_SOCKS5_test():
-    socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 1081)
+    default_proxy = (socks.SOCKS5, "127.0.0.1", 1081)
+    socks.set_default_proxy(*default_proxy)
     good = socket.socket
     socket.socket = socks.socksocket
     status = urllib2.urlopen("http://api.externalip.net/ip/").getcode()
     socket.socket = good
     assert status == 200
+    assert socks.get_default_proxy()[1].decode() == default_proxy[1]
+
 
 def main():
     print("Running tests...")
