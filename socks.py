@@ -186,7 +186,7 @@ class socksocket(socket.socket):
         """get_proxy_peername() -> address info
         Returns the IP and port number of the proxy.
         """
-        return self.proxy_peername
+        return _orig_socket.getpeername(self)
 
     getproxypeername = get_proxy_peername
 
@@ -195,7 +195,7 @@ class socksocket(socket.socket):
         Returns the IP address and port number of the destination
         machine (note: get_proxy_peername returns the proxy)
         """
-        return _orig_socket.get_peername(self)
+        return self.proxy_peername
 
     getpeername = get_peername
 
