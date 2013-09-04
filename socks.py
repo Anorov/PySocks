@@ -114,14 +114,21 @@ def wrap_module(module):
 
 wrapmodule = wrap_module
 
-def create_connection(address, proxy_type=None, proxy_host=None, 
+def create_connection(dest_pair, proxy_type=None, proxy_addr=None, 
                       proxy_port=None, proxy_username=None,
                       proxy_password=None, timeout=None):
+    """create_connection(dest_pair, **proxy_args) -> socket
+    Like socket.create_connection(), but connects to proxy
+    before returning the socket object.
+
+    dest_pair - 2-tuple of (IP/hostname, port).
+    **proxy_args - Same args passed to socksocket.set_proxy().
+    """
     sock = socksocket()
     if isinstance(timeout, (int, float)):
         sock.settimeout(timeout)
-    sock.set_proxy(proxy_type, proxy_host, proxy_port, proxy_username, proxy_password)
-    sock.connect(address)
+    sock.set_proxy(proxy_type, proxy_addr, proxy_port, proxy_username, proxy_password)
+    sock.connect(dest_pair)
     return sock
 
 class socksocket(socket.socket):
@@ -159,6 +166,7 @@ class socksocket(socket.socket):
     def set_proxy(self, proxy_type=None, addr=None, port=None, rdns=True, username=None, password=None):
         """set_proxy(proxy_type, addr[, port[, rdns[, username[, password]]]])
         Sets the proxy to be used.
+
         proxy_type -    The type of the proxy to be used. Three types
                         are supported: PROXY_TYPE_SOCKS4 (including socks4a),
                         PROXY_TYPE_SOCKS5 and PROXY_TYPE_HTTP
@@ -407,9 +415,10 @@ class socksocket(socket.socket):
     def connect(self, dest_pair):
         """connect(self, dest_pair)
         Connects to the specified destination through a proxy.
-        dest_pair - A tuple of the IP/DNS address and the port number.
         Uses the same API as socket's connect().
         To select the proxy server, use set_proxy().
+
+        dest_pair - 2-tuple of (IP/hostname, port).
         """
         proxy_type, addr, port, rdns, username, password = self.proxy
         dest_addr, dest_port = dest_pair
@@ -417,7 +426,7 @@ class socksocket(socket.socket):
         # Do a minimal input check first
         if (not isinstance(dest_pair, (list, tuple)) or len(dest_pair) != 2
             or not isinstance(dest_addr, type("")) or not isinstance(dest_port, int)):
-            raise GeneralProxyError("Invalid destination-connection (address, port) pair")
+            raise GeneralProxyError("Invalid destination-connection (host, port) pair")
         try:
             if proxy_type == PROXY_TYPE_SOCKS5:
                 if port is not None:
