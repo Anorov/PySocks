@@ -7,7 +7,7 @@ setup(
     name = "PySocks",
     version = VERSION,
     description = "A Python SOCKS module",
-    url = "https://github.com/AnorovPySocks",
+    url = "https://github.com/Anorov/PySocks",
     license = "BSD",
     py_modules=["socks"]
 )
