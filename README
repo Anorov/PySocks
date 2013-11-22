@@ -1,20 +1,31 @@
 Updated version of SocksiPy. Many old bugs fixed, including a bug in __recvall() and a bug in __negotiatehttp() that would hang indefinitely if a sock.recv() returned ""
 
-Fully supports Python 2.6 - 3.3
+====
 
-SocksiPyHandler, courtesy e000, was also added as an example of how this module can be used with urllib2. See example code in sockshandler.py.
+* Fully supports Python 2.6 - 3.3
 
-urllib3, which powers the requests module, is working on integrating SOCKS proxy support based on this branch.
+* SocksiPyHandler, courtesy e000, was also added as an example of how this module can be used with urllib2. See example code in sockshandler.py.
 
-SOCKS5, SOCKS4, and HTTP are now aliases for PROXY_TYPE_SOCKS5/SOCKS4/HTTP
+* urllib3, which powers the requests module, is working on integrating SOCKS proxy support based on this branch
+
+* SOCKS5, SOCKS4, and HTTP are now aliases for PROXY_TYPE_SOCKS5, PROXY_TYPE_SOCKS4, and PROXY_TYPE_HTTP
+
+* Tests added
+
+* Various style and performance improvements; codebase simplified
+
+* Actively maintained
+
+====
 
 Warning: PySocks/SocksiPy only supports HTTP proxies that use CONNECT tunneling. Certain HTTP proxies may not work with this library.
 
 ############
 
 (Original SocksiPy README below, amended to reflect API changes)
+----
 
-SocksiPy version 1.3
+SocksiPy version 1.4
 A Python SOCKS module.
 (C) 2006 Dan-Haim. All rights reserved.
 See LICENSE file for details.
@@ -32,8 +43,8 @@ proxy without any special effort.
 
 PROXY COMPATIBILITY
 SocksiPy is compatible with three different types of proxies:
-1. SOCKS Version 4 (Socks4), including the Socks4a extension.
-2. SOCKS Version 5 (Socks5).
+1. SOCKS Version 4 (SOCKS4), including the SOCKS4a extension.
+2. SOCKS Version 5 (SOCKS5).
 3. HTTP Proxies which support tunneling using the CONNECT method.
 
 SYSTEM REQUIREMENTS
@@ -78,8 +89,8 @@ set_proxy(proxy_type, addr[, port[, rdns[, username[, password]]]])
 Explanation of the parameters:
 
 proxy_type - The type of the proxy server. This can be one of three possible
-choices: PROXY_TYPE_SOCKS4, PROXY_TYPE_SOCKS5 and PROXY_TYPE_HTTP for Socks4,
-Socks5 and HTTP servers respectively. SOCKS4, SOCKS5, and HTTP are all aliases, respectively.
+choices: PROXY_TYPE_SOCKS4, PROXY_TYPE_SOCKS5 and PROXY_TYPE_HTTP for SOCKS4,
+SOCKS5 and HTTP servers respectively. SOCKS4, SOCKS5, and HTTP are all aliases, respectively.
 
 addr - The IP address or DNS name of the proxy server.
 
@@ -88,27 +99,27 @@ port - The port of the proxy server. Defaults to 1080 for socks and 8080 for htt
 rdns - This is a boolean flag than modifies the behavior regarding DNS resolving.
 If it is set to True, DNS resolving will be preformed remotely, on the server.
 If it is set to False, DNS resolving will be preformed locally. Please note that
-setting this to True with Socks4 servers actually use an extension to the protocol,
-called Socks4a, which may not be supported on all servers (Socks5 and http servers
+setting this to True with SOCKS4 servers actually use an extension to the protocol,
+called SOCKS4a, which may not be supported on all servers (SOCKS5 and http servers
 always support DNS). The default is True.
 
-username - For Socks5 servers, this allows simple username / password authentication
-with the server. For Socks4 servers, this parameter will be sent as the userid.
+username - For SOCKS5 servers, this allows simple username / password authentication
+with the server. For SOCKS4 servers, this parameter will be sent as the userid.
 This parameter is ignored if an HTTP server is being used. If it is not provided,
 authentication will not be used (servers may accept unauthentication requests).
 
-password - This parameter is valid only for Socks5 servers and specifies the
+password - This parameter is valid only for SOCKS5 servers and specifies the
 respective password for the username provided.
 
 Example of usage:
 
->>> s.set_proxy(socks.PROXY_TYPE_SOCKS5,"socks.example.com")
+>>> s.set_proxy(socks.PROXY_TYPE_SOCKS5, "socks.example.com")
 >>>
 
 After the set_proxy method has been called, simply call the connect method with the
 traditional parameters to establish a connection through the proxy:
 
->>> s.connect(("www.sourceforge.net",80))
+>>> s.connect(("www.sourceforge.net", 80))
 >>>
 
 Connection will take a bit longer to allow negotiation with the proxy server.
@@ -128,23 +139,23 @@ into another category. The parameter is a tuple containing an error code and a
 description of the error, from the following list:
 1 - invalid data - This error means that unexpected data has been received from
 the server. The most common reason is that the server specified as the proxy is
-not really a Socks4/Socks5/HTTP proxy, or maybe the proxy type specified is wrong.
+not really a SOCKS4/SOCKS5/HTTP proxy, or maybe the proxy type specified is wrong.
 4 - bad proxy type - This will be raised if the type of the proxy supplied to the
 set_proxy function was not PROXY_TYPE_SOCKS4/PROXY_TYPE_SOCKS5/PROXY_TYPE_HTTP.
 5 - bad input - This will be raised if the connect method is called with bad input
 parameters.
 
-class Socks5AuthError - This indicates that the connection through a Socks5 server
+class SOCKS5AuthError - This indicates that the connection through a SOCKS5 server
 failed due to an authentication problem. The parameter is a tuple containing a
 code and a description message according to the following list:
 
-1 - authentication is required - This will happen if you use a Socks5 server which
+1 - authentication is required - This will happen if you use a SOCKS5 server which
 requires authentication without providing a username / password at all.
 2 - all offered authentication methods were rejected - This will happen if the proxy
 requires a special authentication method which is not supported by this module.
 3 - unknown username or invalid password - Self descriptive.
 
-class Socks5Error - This will be raised for Socks5 errors which are not related to
+class SOCKS5Error - This will be raised for SOCKS5 errors which are not related to
 authentication. The parameter is a tuple containing a code and a description of the
 error, as given by the server. The possible errors, according to the RFC are:
 
@@ -166,7 +177,7 @@ module, this error should not occur.
 8 - Address type not supported - The client has provided an invalid address type.
 When using this module, this error should not occur.
 
-class Socks4Error - This will be raised for Socks4 errors. The parameter is a tuple
+class SOCKS4Error - This will be raised for SOCKS4 errors. The parameter is a tuple
 containing a code and a description of the error, as given by the server. The
 possible error, according to the specification are:
 
@@ -196,7 +207,7 @@ This is quite useful if you wish to force 3rd party modules to use a socks proxy
 by overriding the socket object.
 For example:
 
->>> socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5,"socks.example.com")
+>>> socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5, "socks.example.com")
 >>> socket.socket = socks.socksocket
 >>> urllib.urlopen("http://www.sourceforge.net/")
 
@@ -205,17 +216,3 @@ PROBLEMS
 ---------
 
 Please open a GitHub issue at https://github.com/Anorov/PySocks
-
-======================================
-
-If you have any problems using this module, please first refer to the BUGS file
-(containing current bugs and issues). If your problem is not mentioned you may
-contact the author at the following E-Mail address:
-
-negativeiq@users.sourceforge.net
-
-Please allow some time for your question to be received and handled.
-
-
-Dan-Haim,
-Author.
