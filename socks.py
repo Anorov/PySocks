@@ -52,7 +52,7 @@ Modifications made by Anorov (https://github.com/Anorov)
 -Various small bug fixes
 """
 
-__version__ = "1.3"
+__version__ = "1.4"
 
 import socket
 import struct
