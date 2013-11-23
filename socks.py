@@ -137,6 +137,7 @@ def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
 
     dest_pair - 2-tuple of (IP/hostname, port).
     **proxy_args - Same args passed to socksocket.set_proxy().
+    timeout - Optional socket timeout value, in seconds.
     """
     sock = socksocket()
     if isinstance(timeout, (int, float)):
