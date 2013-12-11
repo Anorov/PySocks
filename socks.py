@@ -477,7 +477,13 @@ class socksocket(socket.socket):
             self.close()
             proxy_server = "{}:{}".format(proxy_addr.decode(), proxy_port)
             printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
-            errno, msg = error.args
-            msg = "Error connecting to {} proxy {}: {}".format(printable_type,
-                                                               proxy_server, msg)
-            raise socket.error(errno, msg)
+            mkmsg = lambda msg: "Error connecting to {} proxy {}: {}".format(printable_type,
+                                                                             proxy_server, msg)
+            if len(error.args) == 0:
+                args = (mkmsg(None),)
+            elif len(error.args) == 1:
+                args = (mkmsg(error.args[0]),)
+            else:
+                args = tuple(error.args)
+                args = args[:1] + (mkmsg(args[1]),) + args[2:]
+            raise socket.error(*args)
