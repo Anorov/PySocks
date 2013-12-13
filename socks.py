@@ -405,30 +405,33 @@ class socksocket(socket.socket):
         self.sendall(b"CONNECT " + addr.encode() + b":" + str(dest_port).encode() + 
                      b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode() + b"\r\n\r\n")
         
-        resp = self.recv(4096)
-        while b"\r\n\r\n" not in resp and b"\n\n" not in resp:
-            d = self.recv(4096)
-            if not d:
-                self.close()
-                raise GeneralProxyError("Connection closed unexpectedly")
-            resp += d
+        # We just need the first line to check if the connection was successful
+        fobj = self.makefile()
+        status_line = fobj.readline()
+        fobj.close()
+        
+        if not status_line:
+            self.close()
+            raise GeneralProxyError("Connection closed unexpectedly")
+        
+        try:
+            proto, status_code, status_msg = status_line.split(" ", 2)
+        except ValueError:
+            raise GeneralProxyError("HTTP proxy server sent invalid response")
             
-       # We just need the first line to check if the connection was successful
-        status_line = resp.splitlines()[0].split(b" ", 2)
-
-        if not status_line[0].startswith(b"HTTP/"):
+        if not proto.startswith("HTTP/"):
             self.close()
             raise GeneralProxyError("Proxy server does not appear to be an HTTP proxy")
         
         try:
-            status_code = int(status_line[1])
+            status_code = int(status_code)
         except ValueError:
             self.close()
             raise HTTPError("HTTP proxy server did not return a valid HTTP status")
 
         if status_code != 200:
             self.close()
-            error = "{}: {}".format(status_code, status_line[2].decode())
+            error = "{}: {}".format(status_code, status_msg)
             if status_code in (400, 403, 405):
                 # It's likely that the HTTP proxy server does not support the CONNECT tunneling method
                 error += ("\n[*] Note: The HTTP proxy server may not be supported by PySocks"

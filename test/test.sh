@@ -13,5 +13,5 @@ echo "Python 3.x tests"
 python3 sockstest.py
 
 pkill python > /dev/null 2>&1
-pkill mocks > /dev/null 2>&1
+./mocks shutdown >/dev/null 2>&1 &
 echo "Finished tests"

@@ -123,7 +123,7 @@ def run_proxy(port=8080, start_ioloop=True):
     app = tornado.web.Application([
         (r'.*', ProxyHandler),
     ])
-    app.listen(port)
+    app.listen(port, address="127.0.0.1")
     ioloop = tornado.ioloop.IOLoop.instance()
     if start_ioloop:
         ioloop.start()
