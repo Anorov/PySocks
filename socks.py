@@ -417,6 +417,7 @@ class socksocket(socket.socket):
         try:
             proto, status_code, status_msg = status_line.split(" ", 2)
         except ValueError:
+            self.close()
             raise GeneralProxyError("HTTP proxy server sent invalid response")
             
         if not proto.startswith("HTTP/"):
