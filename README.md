@@ -1,18 +1,20 @@
 PySocks
 =======
 
-Updated version of SocksiPy. Many old bugs fixed, including a bug in `__recvall()` and a bug in `__negotiatehttp()`.
+Updated version of SocksiPy. Many old bugs fixed, and overall code cleanup.
 
-**Version:** 1.4.2
+**Version:** 1.5.0
 
 ----------------
 
 Features
 ========
 
-* Fully supports Python 2.6 - 3.3
+* Fully supports Python 2.6 - 3.4
 
 * SocksiPyHandler, courtesy e000, was also added as an example of how this module can be used with urllib2. See example code in sockshandler.py.
+
+* Bugs in the original SocksiPy were fixed, including two that could lead to infinite hanging when communicating with bad proxy servers.
 
 * urllib3, which powers the requests module, is working on integrating SOCKS proxy support based on this branch
 
@@ -27,22 +29,61 @@ Features
 Installation
 ============
 
+    pip install PySocks
+    
+Or download the tarball / `git clone` and...
+
     python setup.py install
+    
+Alternatively, include just `socks.py` in your project.
 
 --------------------------------------------
 
-*Warning:* PySocks/SocksiPy only supports HTTP proxies that use CONNECT tunneling. Certain HTTP proxies may not work with this library. It is recommended that you rely on your HTTP client's native proxy support instead when connecting through non-SOCKS proxies.
+*Warning:* PySocks/SocksiPy only supports HTTP proxies that use CONNECT tunneling. Certain HTTP proxies may not work with this library. If you wish to use HTTP proxies (and not SOCKS proxies), it is recommended that you rely on your HTTP client's native proxy support (`proxies` dict for `requests`, or `urllib2.ProxyHandler` for `urllib2`) instead.
 
 --------------------------------------------
 
 Usage
 =====
 
+## Example ##
+
+    import socks
+    
+    s = socks.socksocket()
+    
+    s.set_proxy(socks.SOCKS5, "localhost") # SOCKS4 and SOCKS5 use port 1080 by default
+    # Or
+    s.set_proxy(socks.SOCKS4, "localhost", 4444)
+    # Or
+    s.set_proxy(socks.HTTP, "5.5.5.5", 8888)
+
+    # Can be treated identical to a regular socket object
+    s.connect(("www.test.com", 80))
+    s.sendall("GET / ...")
+    print s.recv(4096)
+
+
+To monkeypatch the entire standard library with a single default proxy:
+
+    import socket
+    import socks
+    import urllib2
+    
+    socks.set_default_proxy(socks.SOCKS5, "localhost")
+    socket.socket = socks.socksocket
+    
+    urllib2.urlopen("http://...") # All requests will pass through the SOCKS proxy
+    
+Note that monkeypatching may not work for all standard modules or for all third party modules, and generally isn't recommended.
+    
+--------------------------------------------
+    
 Original SocksiPy README attached below, amended to reflect API changes.
 
 --------------------------------------------
 
-SocksiPy - version 1.4.2
+SocksiPy - version 1.5.0
 
 A Python SOCKS module.
 
@@ -130,7 +171,7 @@ always support DNS). The default is True.
 `username` - For SOCKS5 servers, this allows simple username / password authentication
 with the server. For SOCKS4 servers, this parameter will be sent as the userid.
 This parameter is ignored if an HTTP server is being used. If it is not provided,
-authentication will not be used (servers may accept unauthentication requests).
+authentication will not be used (servers may accept unauthenticated requests).
 
 `password` - This parameter is valid only for SOCKS5 servers and specifies the
 respective password for the username provided.
@@ -158,80 +199,89 @@ class `ProxyError` - This is a base exception class. It is not raised directly b
 rather all other exception classes raised by this module are derived from it.
 This allows an easy way to catch all proxy-related errors. It descends from `IOError`.
 
+All `ProxyError` exceptions have an attribute `socket_err`, which will contain either a
+caught `socket.error` exception, or `None` if there wasn't any.
+
 class `GeneralProxyError` - When thrown, it indicates a problem which does not fall
-into another category. The parameter is a tuple containing an error code and a
-description of the error, from the following list:
-1 - invalid data - This error means that unexpected data has been received from
+into another category.
+
+* `Sent invalid data` - This error means that unexpected data has been received from
 the server. The most common reason is that the server specified as the proxy is
 not really a SOCKS4/SOCKS5/HTTP proxy, or maybe the proxy type specified is wrong.
-4 - bad proxy type - This will be raised if the type of the proxy supplied to the
-set_proxy function was not PROXY_TYPE_SOCKS4/PROXY_TYPE_SOCKS5/PROXY_TYPE_HTTP.
-5 - bad input - This will be raised if the connect method is called with bad input
+
+* `Connection closed unexpectedly` - The proxy server unexpectedly closed the connection.
+This may indicate that the proxy server is experiencing network or software problems.
+
+* `Bad proxy type` - This will be raised if the type of the proxy supplied to the
+set_proxy function was not one of `SOCKS4`/`SOCKS5`/`HTTP`.
+
+* `Bad input` - This will be raised if the `connect()` method is called with bad input
 parameters.
 
 class `SOCKS5AuthError` - This indicates that the connection through a SOCKS5 server
-failed due to an authentication problem. The parameter is a tuple containing a
-code and a description message according to the following list:
+failed due to an authentication problem.
 
-1 - authentication is required - This will happen if you use a SOCKS5 server which
+* `Authentication is required` - This will happen if you use a SOCKS5 server which
 requires authentication without providing a username / password at all.
-2 - all offered authentication methods were rejected - This will happen if the proxy
+
+* `All offered authentication methods were rejected` - This will happen if the proxy
 requires a special authentication method which is not supported by this module.
-3 - unknown username or invalid password - Self descriptive.
+
+* `Unknown username or invalid password` - Self descriptive.
 
 class `SOCKS5Error` - This will be raised for SOCKS5 errors which are not related to
 authentication. The parameter is a tuple containing a code and a description of the
 error, as given by the server. The possible errors, according to the RFC are:
 
-1 - General SOCKS server failure - If for any reason the proxy server is unable to
+`0x01` - General SOCKS server failure - If for any reason the proxy server is unable to
 fulfill your request (internal server error).
-2 - connection not allowed by ruleset - If the address you're trying to connect to
+`0x02` - connection not allowed by ruleset - If the address you're trying to connect to
 is blacklisted on the server or requires authentication.
-3 - Network unreachable - The target could not be contacted. A router on the network
+`0x03` - Network unreachable - The target could not be contacted. A router on the network
 had replied with a destination net unreachable error.
-4 - Host unreachable - The target could not be contacted. A router on the network
+`0x04` - Host unreachable - The target could not be contacted. A router on the network
 had replied with a destination host unreachable error.
-5 - Connection refused - The target server has actively refused the connection
+`0x05` - Connection refused - The target server has actively refused the connection
 (the requested port is closed).
-6 - TTL expired - The TTL value of the SYN packet from the proxy to the target server
+`0x06` - TTL expired - The TTL value of the SYN packet from the proxy to the target server
 has expired. This usually means that there are network problems causing the packet
 to be caught in a router-to-router "ping-pong".
-7 - Command not supported - The client has issued an invalid command. When using this
+`0x07` - Command not supported - The client has issued an invalid command. When using this
 module, this error should not occur.
-8 - Address type not supported - The client has provided an invalid address type.
+`0x08` - Address type not supported - The client has provided an invalid address type.
 When using this module, this error should not occur.
 
 class `SOCKS4Error` - This will be raised for SOCKS4 errors. The parameter is a tuple
 containing a code and a description of the error, as given by the server. The
 possible error, according to the specification are:
 
-1 - Request rejected or failed - Will be raised in the event of an failure for any
+`0x5B` - Request rejected or failed - Will be raised in the event of an failure for any
 reason other then the two mentioned next.
-2 - request rejected because SOCKS server cannot connect to identd on the client -
+`0x5C` - request rejected because SOCKS server cannot connect to identd on the client -
 The Socks server had tried an ident lookup on your computer and has failed. In this
 case you should run an identd server and/or configure your firewall to allow incoming
 connections to local port 113 from the remote server.
-3 - request rejected because the client program and identd report different user-ids - 
+`0x5D` - request rejected because the client program and identd report different user-ids - 
 The Socks server had performed an ident lookup on your computer and has received a
 different userid than the one you have provided. Change your userid (through the
 username parameter of the set_proxy method) to match and try again.
 
-class `HTTPError` - This will be raised for HTTP errors. The parameter is a tuple
-containing the HTTP status code and the description of the server.
-
+class `HTTPError` - This will be raised for HTTP errors. The message will contain
+the HTTP status code and provided error message.
 
 After establishing the connection, the object behaves like a standard socket.
-Call the close method to close the connection.
+Methods like `makefile()` and `settimeout()` should behave just like regular sockets.
+Call the `close()` method to close the connection.
 
-In addition to the `socksocke`t class, an additional function worth mentioning is the
+In addition to the `socksocket` class, an additional function worth mentioning is the
 `set_default_proxy` function. The parameters are the same as the `set_proxy` method.
 This function will set default proxy settings for newly created `socksocket` objects,
 in which the proxy settings haven't been changed via the `set_proxy` method.
-This is quite useful if you wish to force 3rd party modules to use a socks proxy,
+This is quite useful if you wish to force 3rd party modules to use a SOCKS proxy,
 by overriding the socket object.
 For example:
 
-    >>> socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5, "socks.example.com")
+    >>> socks.set_default_proxy(socks.SOCKS5, "socks.example.com")
     >>> socket.socket = socks.socksocket
     >>> urllib.urlopen("http://www.sourceforge.net/")
 

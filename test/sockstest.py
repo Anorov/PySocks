@@ -43,6 +43,25 @@ def socket_SOCKS5_test():
     status = s.recv(2048).splitlines()[0]
     assert status.startswith(b"HTTP/1.1 200")
 
+def SOCKS5_connect_timeout_test():
+    s = socks.socksocket()
+    s.settimeout(0.0001)
+    s.set_proxy(socks.SOCKS5, "8.8.8.8", 80)
+    try:
+        s.connect(("ifconfig.me", 80))
+    except socks.ProxyConnectionError as e:
+        assert str(e.socket_err) == "timed out"
+
+def SOCKS5_timeout_test():
+    s = socks.socksocket()
+    s.settimeout(0.0001)
+    s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081)
+    try:
+        s.connect(("ifconfig.me", 4444))
+    except socks.GeneralProxyError as e:
+        assert str(e.socket_err) == "timed out"
+
+
 def socket_SOCKS5_auth_test():
     # TODO: add support for this test. Will need a better SOCKS5 server.
     s = socks.socksocket()
@@ -72,14 +91,6 @@ def socket_SOCKS5_IP_test():
     s = socks.socksocket()
     s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081)
     s.connect(("133.242.129.236", 80))
-    s.sendall(raw_HTTP_request())
-    status = s.recv(2048).splitlines()[0]
-    assert status.startswith(b"HTTP/1.1 200")
-
-def socket_SOCKS4_test():
-    s = socks.socksocket()
-    s.set_proxy(socks.SOCKS4, "127.0.0.1", 1080)
-    s.connect(("ifconfig.me", 80))
     s.sendall(raw_HTTP_request())
     status = s.recv(2048).splitlines()[0]
     assert status.startswith(b"HTTP/1.1 200")
@@ -128,31 +139,36 @@ def global_override_SOCKS5_test():
 def main():
     print("Running tests...")
     socket_HTTP_test()
-    print("1/10")
+    print("1/12")
     socket_SOCKS4_test()
-    print("2/10")
+    print("2/12")
     socket_SOCKS5_test()
-    print("3/10")
+    print("3/12")
     if not PY3K:
         urllib2_handler_HTTP_test()
-        print("3.33/10")
+        print("3.33/12")
         urllib2_handler_SOCKS5_test()
-        print("3.66/10")
+        print("3.66/12")
     socket_HTTP_IP_test()
-    print("4/10")
+    print("4/12")
     socket_SOCKS4_IP_test()
-    print("5/10")
+    print("5/12")
     socket_SOCKS5_IP_test()
-    print("6/10")
+    print("6/12")
+    SOCKS5_connect_timeout_test()
+    print("7/12")
+    SOCKS5_timeout_test()
+    print("8/12")
     urllib2_HTTP_test()
-    print("7/10")
+    print("9/12")
     urllib2_SOCKS5_test()
-    print("8/10")
+    print("10/12")
     global_override_HTTP_test()
-    print("9/10")
+    print("11/12")
     global_override_SOCKS5_test()
-    print("10/10")
+    print("12/12")
     print("All tests ran successfully")
+
 
 if __name__ == "__main__":
     main()
