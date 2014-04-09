@@ -181,11 +181,6 @@ class socksocket(socket.socket):
         self.proxy_sockname = None
         self.proxy_peername = None
 
-        self.proxy_negotiators = { SOCKS4: self._negotiate_SOCKS4,
-                                   SOCKS5: self._negotiate_SOCKS5,
-                                   HTTP: self._negotiate_HTTP
-                                 }
-
     def _recvall(self, count):
         """
         Receive EXACTLY the number of bytes requested from the socket.
@@ -446,6 +441,11 @@ class socksocket(socket.socket):
         self.proxy_sockname = (b"0.0.0.0", 0)
         self.proxy_peername = addr, dest_port
 
+    _proxy_negotiators = { SOCKS4: _negotiate_SOCKS4,
+                               SOCKS5: _negotiate_SOCKS5,
+                               HTTP: _negotiate_HTTP
+                             }
+
 
     def connect(self, dest_pair):
         """        
@@ -493,7 +493,8 @@ class socksocket(socket.socket):
             # Connected to proxy server, now negotiate
             try:
                 # Calls negotiate_{SOCKS4, SOCKS5, HTTP}
-                self.proxy_negotiators[proxy_type](dest_addr, dest_port)
+                negotiate = self._proxy_negotiators[proxy_type]
+                negotiate(self, dest_addr, dest_port)
             except socket.error as error:
                 # Wrap socket errors
                 self.close()
