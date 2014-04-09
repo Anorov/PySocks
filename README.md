@@ -231,8 +231,10 @@ requires a special authentication method which is not supported by this module.
 * `Unknown username or invalid password` - Self descriptive.
 
 class `SOCKS5Error` - This will be raised for SOCKS5 errors which are not related to
-authentication. The parameter is a tuple containing a code and a description of the
-error, as given by the server. The possible errors, according to the RFC are:
+authentication.
+The parameter is a tuple containing a code, as given by the server,
+and a description of the
+error. The possible errors, according to the RFC, are:
 
 * `0x01` - General SOCKS server failure - If for any reason the proxy server is unable to
 fulfill your request (internal server error).

@@ -111,7 +111,7 @@ def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username
     set_default_proxy(proxy_type, addr[, port[, rdns[, username, password]]])
 
     Sets a default proxy which all further socksocket objects will use,
-    unless explicitly changed.
+    unless explicitly changed. All parameters are as for socket.set_proxy().
     """
     socksocket.default_proxy = (proxy_type, addr.encode(), port, rdns, 
                                 username.encode() if username else None,
@@ -144,7 +144,7 @@ wrapmodule = wrap_module
 def create_connection(dest_pair, proxy_type=None, proxy_addr=None, 
                       proxy_port=None, proxy_username=None,
                       proxy_password=None, timeout=None):
-    """create_connection(dest_pair, **proxy_args) -> socket object
+    """create_connection(dest_pair, *[, timeout], **proxy_args) -> socket object
 
     Like socket.create_connection(), but connects to proxy
     before returning the socket object.
