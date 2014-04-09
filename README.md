@@ -107,6 +107,7 @@ proxy without any special effort.
 *PROXY COMPATIBILITY*
 
 SocksiPy is compatible with three different types of proxies:
+
 1. SOCKS Version 4 (SOCKS4), including the SOCKS4a extension.
 2. SOCKS Version 5 (SOCKS5).
 3. HTTP Proxies which support tunneling using the CONNECT method.
@@ -233,35 +234,35 @@ class `SOCKS5Error` - This will be raised for SOCKS5 errors which are not relate
 authentication. The parameter is a tuple containing a code and a description of the
 error, as given by the server. The possible errors, according to the RFC are:
 
-`0x01` - General SOCKS server failure - If for any reason the proxy server is unable to
+* `0x01` - General SOCKS server failure - If for any reason the proxy server is unable to
 fulfill your request (internal server error).
-`0x02` - connection not allowed by ruleset - If the address you're trying to connect to
+* `0x02` - connection not allowed by ruleset - If the address you're trying to connect to
 is blacklisted on the server or requires authentication.
-`0x03` - Network unreachable - The target could not be contacted. A router on the network
+* `0x03` - Network unreachable - The target could not be contacted. A router on the network
 had replied with a destination net unreachable error.
-`0x04` - Host unreachable - The target could not be contacted. A router on the network
+* `0x04` - Host unreachable - The target could not be contacted. A router on the network
 had replied with a destination host unreachable error.
-`0x05` - Connection refused - The target server has actively refused the connection
+* `0x05` - Connection refused - The target server has actively refused the connection
 (the requested port is closed).
-`0x06` - TTL expired - The TTL value of the SYN packet from the proxy to the target server
+* `0x06` - TTL expired - The TTL value of the SYN packet from the proxy to the target server
 has expired. This usually means that there are network problems causing the packet
 to be caught in a router-to-router "ping-pong".
-`0x07` - Command not supported - The client has issued an invalid command. When using this
+* `0x07` - Command not supported - The client has issued an invalid command. When using this
 module, this error should not occur.
-`0x08` - Address type not supported - The client has provided an invalid address type.
+* `0x08` - Address type not supported - The client has provided an invalid address type.
 When using this module, this error should not occur.
 
 class `SOCKS4Error` - This will be raised for SOCKS4 errors. The parameter is a tuple
 containing a code and a description of the error, as given by the server. The
 possible error, according to the specification are:
 
-`0x5B` - Request rejected or failed - Will be raised in the event of an failure for any
+* `0x5B` - Request rejected or failed - Will be raised in the event of an failure for any
 reason other then the two mentioned next.
-`0x5C` - request rejected because SOCKS server cannot connect to identd on the client -
+* `0x5C` - request rejected because SOCKS server cannot connect to identd on the client -
 The Socks server had tried an ident lookup on your computer and has failed. In this
 case you should run an identd server and/or configure your firewall to allow incoming
 connections to local port 113 from the remote server.
-`0x5D` - request rejected because the client program and identd report different user-ids - 
+* `0x5D` - request rejected because the client program and identd report different user-ids - 
 The Socks server had performed an ident lookup on your computer and has received a
 different userid than the one you have provided. Change your userid (through the
 username parameter of the set_proxy method) to match and try again.
