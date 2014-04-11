@@ -10,7 +10,7 @@ Updated version of SocksiPy. Many old bugs fixed, and overall code cleanup.
 Features
 ========
 
-* Fully supports Python 2.6 - 3.4
+* Fully supports Python 2.7 and 3.1 - 3.4
 
 * SocksiPyHandler, courtesy e000, was also added as an example of how this module can be used with urllib2. See example code in sockshandler.py.
 
