@@ -57,6 +57,7 @@ __version__ = "1.5.1"
 import socket
 import struct
 from errno import EOPNOTSUPP, EINVAL
+from io import BytesIO
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
 PROXY_TYPE_SOCKS5 = SOCKS5 = 2
@@ -188,14 +189,14 @@ class socksocket(socket.socket):
         self.proxy_sockname = None
         self.proxy_peername = None
 
-    def _recvall(self, sock, count):
+    def _readall(self, file, count):
         """
-        Receive EXACTLY the number of bytes requested from the socket.
+        Receive EXACTLY the number of bytes requested from the file object.
         Blocks until the required number of bytes have been received.
         """
         data = b""
         while len(data) < count:
-            d = sock.recv(count - len(data))
+            d = file.read(count - len(data))
             if not d:
                 raise GeneralProxyError("Connection closed unexpectedly")
             data += d
@@ -255,11 +256,15 @@ class socksocket(socket.socket):
         if not self._proxyconn:
             self.bind(("", 0))
         
+        header = BytesIO()
         RSV = b"\x00\x00"
+        header.write(RSV)
         STANDALONE = b"\x00"
-        dst, _ = self._SOCKS5_address(address)
-        header = RSV + STANDALONE + dst
-        return self.send(header + bytes) - len(header)
+        header.write(STANDALONE)
+        self._write_SOCKS5_address(address, header)
+        
+        sent = _orig_socket.send(self, header.getvalue() + bytes)
+        return sent - header.tell()
     
     def close(self):
         if self._proxyconn:
@@ -305,84 +310,82 @@ class socksocket(socket.socket):
         """
         proxy_type, addr, port, rdns, username, password = self.proxy
 
-        # First we'll send the authentication packages we support.
-        if username and password:
-            # The username/password details were supplied to the
-            # set_proxy method so we support the USERNAME/PASSWORD
-            # authentication (in addition to the standard none).
-            conn.sendall(b"\x05\x02\x00\x02")
-        else:
-            # No username/password were entered, therefore we
-            # only support connections with no authentication.
-            conn.sendall(b"\x05\x01\x00")
-
-        # We'll receive the server's response to determine which
-        # method was selected
-        chosen_auth = self._recvall(conn, 2)
-
-        if chosen_auth[0:1] != b"\x05":
-            # Note: string[i:i+1] is used because indexing of a bytestring
-            # via bytestring[i] yields an integer in Python 3
-            raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
-
-        # Check the chosen authentication method
-
-        if chosen_auth[1:2] == b"\x02":
-            # Okay, we need to perform a basic username/password
-            # authentication.
-            conn.sendall(b"\x01" + chr(len(username)).encode()
-                         + username
-                         + chr(len(password)).encode()
-                         + password)
-            auth_status = self._recvall(conn, 2)
-            if auth_status[0:1] != b"\x01":
-                # Bad response
-                raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
-            if auth_status[1:2] != b"\x00":
-                # Authentication failed
-                raise SOCKS5AuthError("SOCKS5 authentication failed")
-
-            # Otherwise, authentication succeeded
-
-        # No authentication is required if 0x00
-        elif chosen_auth[1:2] != b"\x00":
-            # Reaching here is always bad
-            if chosen_auth[1:2] == b"\xFF":
-                raise SOCKS5AuthError("All offered SOCKS5 authentication methods were rejected")
+        writer = conn.makefile("wb")
+        reader = conn.makefile("rb", 0)  # buffering=0 renamed in Python 3
+        try:
+            # First we'll send the authentication packages we support.
+            if username and password:
+                # The username/password details were supplied to the
+                # set_proxy method so we support the USERNAME/PASSWORD
+                # authentication (in addition to the standard none).
+                writer.write(b"\x05\x02\x00\x02")
             else:
+                # No username/password were entered, therefore we
+                # only support connections with no authentication.
+                writer.write(b"\x05\x01\x00")
+
+            # We'll receive the server's response to determine which
+            # method was selected
+            writer.flush()
+            chosen_auth = self._readall(reader, 2)
+
+            if chosen_auth[0:1] != b"\x05":
+                # Note: string[i:i+1] is used because indexing of a bytestring
+                # via bytestring[i] yields an integer in Python 3
                 raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
-        # Now we can request the actual connection
-        req = b"\x05" + cmd + b"\x00"
-        dst, resolved = self._SOCKS5_address(dst)
-        req += dst
-        conn.sendall(req)
+            # Check the chosen authentication method
 
-        # Get the response
-        resp = self._recvall(conn, 4)
-        if resp[0:1] != b"\x05":
-            raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
+            if chosen_auth[1:2] == b"\x02":
+                # Okay, we need to perform a basic username/password
+                # authentication.
+                writer.write(b"\x01" + chr(len(username)).encode()
+                             + username
+                             + chr(len(password)).encode()
+                             + password)
+                writer.flush()
+                auth_status = self._readall(reader, 2)
+                if auth_status[0:1] != b"\x01":
+                    # Bad response
+                    raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
+                if auth_status[1:2] != b"\x00":
+                    # Authentication failed
+                    raise SOCKS5AuthError("SOCKS5 authentication failed")
 
-        status = ord(resp[1:2])
-        if status != 0x00:
-            # Connection failed: server returned an error
-            error = SOCKS5_ERRORS.get(status, "Unknown error")
-            raise SOCKS5Error("{0:#04x}: {1}".format(status, error))
+                # Otherwise, authentication succeeded
 
-        # Get the bound address/port
-        if resp[3:4] == b"\x01":
-            bound_addr = socket.inet_ntoa(self._recvall(conn, 4))
-        elif resp[3:4] == b"\x03":
-            resp += conn.recv(1)
-            bound_addr = self._recvall(conn, ord(resp[4:5]))
-        else:
-            raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
+            # No authentication is required if 0x00
+            elif chosen_auth[1:2] != b"\x00":
+                # Reaching here is always bad
+                if chosen_auth[1:2] == b"\xFF":
+                    raise SOCKS5AuthError("All offered SOCKS5 authentication methods were rejected")
+                else:
+                    raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
-        bound_port = struct.unpack(">H", self._recvall(conn, 2))[0]
-        self.proxy_sockname = bound_addr, bound_port
-        return resolved
+            # Now we can request the actual connection
+            writer.write(b"\x05" + cmd + b"\x00")
+            resolved = self._write_SOCKS5_address(dst, writer)
+            writer.flush()
+
+            # Get the response
+            resp = self._readall(reader, 3)
+            if resp[0:1] != b"\x05":
+                raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
+
+            status = ord(resp[1:2])
+            if status != 0x00:
+                # Connection failed: server returned an error
+                error = SOCKS5_ERRORS.get(status, "Unknown error")
+                raise SOCKS5Error("{0:#04x}: {1}".format(status, error))
+
+            # Get the bound address/port
+            self.proxy_sockname = self._read_SOCKS5_address(reader)
+            return resolved
+        finally:
+            reader.close()
+            writer.close()
     
-    def _SOCKS5_address(self, addr):
+    def _write_SOCKS5_address(self, addr, file):
         """
         Return the host and port packed for the SOCKS5 protocol,
         and the resolved address as a tuple object.
@@ -394,21 +397,34 @@ class socksocket(socket.socket):
         # use the IPv4 address request even if remote resolving was specified.
         try:
             addr_bytes = socket.inet_aton(host)
-            packed = b"\x01" + addr_bytes
+            file.write(b"\x01" + addr_bytes)
             host = socket.inet_ntoa(addr_bytes)
         except socket.error:
             # Well it's not an IP number, so it's probably a DNS name.
             if rdns:
                 # Resolve remotely
-                packed = b"\x03" + chr(len(host)).encode() + host.encode()
+                file.write(b"\x03" + chr(len(host)).encode() + host.encode())
             else:
                 # Resolve locally
                 addr_bytes = socket.inet_aton(socket.gethostbyname(host))
-                packed = b"\x01" + addr_bytes
+                file.write(b"\x01" + addr_bytes)
                 host = socket.inet_ntoa(addr_bytes)
 
-        packed += struct.pack(">H", port)
-        return packed, (host, port)
+        file.write(struct.pack(">H", port))
+        return host, port
+    
+    def _read_SOCKS5_address(self, file):
+        atyp = self._readall(file, 1)
+        if atyp == b"\x01":
+            addr = socket.inet_ntoa(self._readall(file, 4))
+        elif atyp == b"\x03":
+            length = self._readall(file, 1)
+            addr = self._readall(file, ord(length))
+        else:
+            raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
+
+        port = struct.unpack(">H", self._readall(file, 2))[0]
+        return addr, port
 
     def _negotiate_SOCKS4(self, dest_addr, dest_port):
         """
@@ -416,51 +432,58 @@ class socksocket(socket.socket):
         """
         proxy_type, addr, port, rdns, username, password = self.proxy
 
-        # Check if the destination address provided is an IP address
-        remote_resolve = False
+        writer = self.makefile("wb")
+        reader = self.makefile("rb", 0)  # buffering=0 renamed in Python 3
         try:
-            addr_bytes = socket.inet_aton(dest_addr)
-        except socket.error:
-            # It's a DNS name. Check where it should be resolved.
-            if rdns:
-                addr_bytes = b"\x00\x00\x00\x01"
-                remote_resolve = True
+            # Check if the destination address provided is an IP address
+            remote_resolve = False
+            try:
+                addr_bytes = socket.inet_aton(dest_addr)
+            except socket.error:
+                # It's a DNS name. Check where it should be resolved.
+                if rdns:
+                    addr_bytes = b"\x00\x00\x00\x01"
+                    remote_resolve = True
+                else:
+                    addr_bytes = socket.inet_aton(socket.gethostbyname(dest_addr))
+
+            # Construct the request packet
+            writer.write(struct.pack(">BBH", 0x04, 0x01, dest_port))
+            writer.write(addr_bytes)
+
+            # The username parameter is considered userid for SOCKS4
+            if username:
+                writer.write(username)
+            writer.write(b"\x00")
+
+            # DNS name if remote resolving is required
+            # NOTE: This is actually an extension to the SOCKS4 protocol
+            # called SOCKS4A and may not be supported in all cases.
+            if remote_resolve:
+                writer.write(dest_addr.encode() + b"\x00")
+            writer.flush()
+
+            # Get the response from the server
+            resp = self._readall(reader, 8)
+            if resp[0:1] != b"\x00":
+                # Bad data
+                raise GeneralProxyError("SOCKS4 proxy server sent invalid data")
+
+            status = ord(resp[1:2])
+            if status != 0x5A:
+                # Connection failed: server returned an error
+                error = SOCKS4_ERRORS.get(status, "Unknown error")
+                raise SOCKS4Error("{0:#04x}: {1}".format(status, error))
+
+            # Get the bound address/port
+            self.proxy_sockname = (socket.inet_ntoa(resp[4:]), struct.unpack(">H", resp[2:4])[0])
+            if remote_resolve:
+                self.proxy_peername = socket.inet_ntoa(addr_bytes), dest_port
             else:
-                addr_bytes = socket.inet_aton(socket.gethostbyname(dest_addr))
-
-        # Construct the request packet
-        req = struct.pack(">BBH", 0x04, 0x01, dest_port) + addr_bytes
-
-        # The username parameter is considered userid for SOCKS4
-        if username:
-            req += username
-        req += b"\x00"
-
-        # DNS name if remote resolving is required
-        # NOTE: This is actually an extension to the SOCKS4 protocol
-        # called SOCKS4A and may not be supported in all cases.
-        if remote_resolve:
-            req += dest_addr.encode() + b"\x00"
-        self.sendall(req)
-
-        # Get the response from the server
-        resp = self._recvall(self, 8)
-        if resp[0:1] != b"\x00":
-            # Bad data
-            raise GeneralProxyError("SOCKS4 proxy server sent invalid data")
-
-        status = ord(resp[1:2])
-        if status != 0x5A:
-            # Connection failed: server returned an error
-            error = SOCKS4_ERRORS.get(status, "Unknown error")
-            raise SOCKS4Error("{0:#04x}: {1}".format(status, error))
-
-        # Get the bound address/port
-        self.proxy_sockname = (socket.inet_ntoa(resp[4:]), struct.unpack(">H", resp[2:4])[0])
-        if remote_resolve:
-            self.proxy_peername = socket.inet_ntoa(addr_bytes), dest_port
-        else:
-            self.proxy_peername = dest_addr, dest_port
+                self.proxy_peername = dest_addr, dest_port
+        finally:
+            reader.close()
+            writer.close()
 
     def _negotiate_HTTP(self, dest_addr, dest_port):
         """
