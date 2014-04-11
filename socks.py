@@ -330,7 +330,7 @@ class socksocket(socket.socket):
         
         # Get the bound address/port
         if resp[3:4] == b"\x01":
-            bound_addr = self._recvall(4)
+            bound_addr = socket.inet_ntoa(self._recvall(4))
         elif resp[3:4] == b"\x03":
             resp += self.recv(1)
             bound_addr = self._recvall(ord(resp[4:5]))
