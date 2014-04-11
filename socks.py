@@ -57,7 +57,7 @@ __version__ = "1.5.1"
 import socket
 import struct
 from errno import EOPNOTSUPP, EINVAL
-from io import BytesIO
+from io import BytesIO, SEEK_CUR
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
 PROXY_TYPE_SOCKS5 = SOCKS5 = 2
@@ -265,6 +265,18 @@ class socksocket(socket.socket):
         
         sent = _orig_socket.send(self, header.getvalue() + bytes)
         return sent - header.tell()
+    
+    def recvfrom(self, bufsize):
+        if not self._proxyconn:
+            self.bind(("", 0))
+        
+        buf = BytesIO(_orig_socket.recv(self, bufsize))
+        buf.seek(+2, SEEK_CUR)
+        frag = buf.read(1)
+        if ord(frag):
+            raise NotImplementedError("Received UDP packet fragment")
+        addr = self._read_SOCKS5_address(buf)
+        return (buf.read(), addr)
     
     def close(self):
         if self._proxyconn:
