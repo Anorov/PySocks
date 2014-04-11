@@ -111,7 +111,7 @@ def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username
     set_default_proxy(proxy_type, addr[, port[, rdns[, username, password]]])
 
     Sets a default proxy which all further socksocket objects will use,
-    unless explicitly changed.
+    unless explicitly changed. All parameters are as for socket.set_proxy().
     """
     socksocket.default_proxy = (proxy_type, addr.encode(), port, rdns, 
                                 username.encode() if username else None,
@@ -144,7 +144,7 @@ wrapmodule = wrap_module
 def create_connection(dest_pair, proxy_type=None, proxy_addr=None, 
                       proxy_port=None, proxy_username=None,
                       proxy_password=None, timeout=None):
-    """create_connection(dest_pair, **proxy_args) -> socket object
+    """create_connection(dest_pair, *[, timeout], **proxy_args) -> socket object
 
     Like socket.create_connection(), but connects to proxy
     before returning the socket object.
@@ -180,11 +180,6 @@ class socksocket(socket.socket):
             self.proxy = (None, None, None, None, None, None)
         self.proxy_sockname = None
         self.proxy_peername = None
-
-        self.proxy_negotiators = { SOCKS4: self._negotiate_SOCKS4,
-                                   SOCKS5: self._negotiate_SOCKS5,
-                                   HTTP: self._negotiate_HTTP
-                                 }
 
     def _recvall(self, count):
         """
@@ -335,7 +330,7 @@ class socksocket(socket.socket):
         
         # Get the bound address/port
         if resp[3:4] == b"\x01":
-            bound_addr = self._recvall(4)
+            bound_addr = socket.inet_ntoa(self._recvall(4))
         elif resp[3:4] == b"\x03":
             resp += self.recv(1)
             bound_addr = self._recvall(ord(resp[4:5]))
@@ -446,6 +441,11 @@ class socksocket(socket.socket):
         self.proxy_sockname = (b"0.0.0.0", 0)
         self.proxy_peername = addr, dest_port
 
+    _proxy_negotiators = { SOCKS4: _negotiate_SOCKS4,
+                               SOCKS5: _negotiate_SOCKS5,
+                               HTTP: _negotiate_HTTP
+                             }
+
 
     def connect(self, dest_pair):
         """        
@@ -493,7 +493,8 @@ class socksocket(socket.socket):
             # Connected to proxy server, now negotiate
             try:
                 # Calls negotiate_{SOCKS4, SOCKS5, HTTP}
-                self.proxy_negotiators[proxy_type](dest_addr, dest_port)
+                negotiate = self._proxy_negotiators[proxy_type]
+                negotiate(self, dest_addr, dest_port)
             except socket.error as error:
                 # Wrap socket errors
                 self.close()
