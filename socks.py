@@ -181,14 +181,14 @@ class socksocket(socket.socket):
         self.proxy_sockname = None
         self.proxy_peername = None
 
-    def _recvall(self, count):
+    def _recvall(self, sock, count):
         """
         Receive EXACTLY the number of bytes requested from the socket.
         Blocks until the required number of bytes have been received.
         """
         data = b""
         while len(data) < count:
-            d = self.recv(count - len(data))
+            d = sock.recv(count - len(data))
             if not d:
                 raise GeneralProxyError("Connection closed unexpectedly")
             data += d
@@ -243,9 +243,17 @@ class socksocket(socket.socket):
 
     getpeername = get_peername
 
-    def _negotiate_SOCKS5(self, dest_addr, dest_port):
+    def _negotiate_SOCKS5(self, *dest_addr):
         """
-        Negotiates a connection through a SOCKS5 server.
+        Negotiates a stream connection through a SOCKS5 server.
+        """
+        CONNECT = b"\x01"
+        self.proxy_peername = self._SOCKS5_request(self, CONNECT, dest_addr)
+    
+    def _SOCKS5_request(self, conn, cmd, dst):
+        """
+        Send SOCKS5 request with given command (CMD field) and
+        address (DST field). Returns resolved DST address that was used.
         """
         proxy_type, addr, port, rdns, username, password = self.proxy
 
@@ -254,15 +262,15 @@ class socksocket(socket.socket):
             # The username/password details were supplied to the
             # set_proxy method so we support the USERNAME/PASSWORD
             # authentication (in addition to the standard none).
-            self.sendall(b"\x05\x02\x00\x02")
+            conn.sendall(b"\x05\x02\x00\x02")
         else:
             # No username/password were entered, therefore we
             # only support connections with no authentication.
-            self.sendall(b"\x05\x01\x00")
+            conn.sendall(b"\x05\x01\x00")
 
         # We'll receive the server's response to determine which
         # method was selected
-        chosen_auth = self._recvall(2)
+        chosen_auth = self._recvall(conn, 2)
 
         if chosen_auth[0:1] != b"\x05":
             # Note: string[i:i+1] is used because indexing of a bytestring
@@ -274,11 +282,11 @@ class socksocket(socket.socket):
         if chosen_auth[1:2] == b"\x02":
             # Okay, we need to perform a basic username/password
             # authentication.
-            self.sendall(b"\x01" + chr(len(username)).encode()
+            conn.sendall(b"\x01" + chr(len(username)).encode()
                          + username
                          + chr(len(password)).encode()
                          + password)
-            auth_status = self._recvall(2)
+            auth_status = self._recvall(conn, 2)
             if auth_status[0:1] != b"\x01":
                 # Bad response
                 raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
@@ -297,28 +305,13 @@ class socksocket(socket.socket):
                 raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
         # Now we can request the actual connection
-        req = b"\x05\x01\x00"
-        # If the given destination address is an IP address, we'll
-        # use the IPv4 address request even if remote resolving was specified.
-        try:
-            addr_bytes = socket.inet_aton(dest_addr)
-            req += b"\x01" + addr_bytes
-        except socket.error:
-            # Well it's not an IP number, so it's probably a DNS name.
-            if rdns:
-                # Resolve remotely
-                addr_bytes = None
-                req += b"\x03" + chr(len(dest_addr)).encode() + dest_addr.encode()
-            else:
-                # Resolve locally
-                addr_bytes = socket.inet_aton(socket.gethostbyname(dest_addr))
-                req += b"\x01" + addr_bytes
-
-        req += struct.pack(">H", dest_port)
-        self.sendall(req)
+        req = b"\x05" + cmd + b"\x00"
+        dst, resolved = self._SOCKS5_address(dst)
+        req += dst
+        conn.sendall(req)
 
         # Get the response
-        resp = self._recvall(4)
+        resp = self._recvall(conn, 4)
         if resp[0:1] != b"\x05":
             raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
@@ -330,19 +323,44 @@ class socksocket(socket.socket):
 
         # Get the bound address/port
         if resp[3:4] == b"\x01":
-            bound_addr = socket.inet_ntoa(self._recvall(4))
+            bound_addr = socket.inet_ntoa(self._recvall(conn, 4))
         elif resp[3:4] == b"\x03":
-            resp += self.recv(1)
-            bound_addr = self._recvall(ord(resp[4:5]))
+            resp += conn.recv(1)
+            bound_addr = self._recvall(conn, ord(resp[4:5]))
         else:
             raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
-        bound_port = struct.unpack(">H", self._recvall(2))[0]
+        bound_port = struct.unpack(">H", self._recvall(conn, 2))[0]
         self.proxy_sockname = bound_addr, bound_port
-        if addr_bytes:
-            self.proxy_peername = socket.inet_ntoa(addr_bytes), dest_port
-        else:
-            self.proxy_peername = dest_addr, dest_port
+        return resolved
+    
+    def _SOCKS5_address(self, addr):
+        """
+        Return the host and port packed for the SOCKS5 protocol,
+        and the resolved address as a tuple object.
+        """
+        host, port = addr
+        proxy_type, _, _, rdns, username, password = self.proxy
+        
+        # If the given destination address is an IP address, we'll
+        # use the IPv4 address request even if remote resolving was specified.
+        try:
+            addr_bytes = socket.inet_aton(host)
+            packed = b"\x01" + addr_bytes
+            host = socket.inet_ntoa(addr_bytes)
+        except socket.error:
+            # Well it's not an IP number, so it's probably a DNS name.
+            if rdns:
+                # Resolve remotely
+                packed = b"\x03" + chr(len(host)).encode() + host.encode()
+            else:
+                # Resolve locally
+                addr_bytes = socket.inet_aton(socket.gethostbyname(host))
+                packed = b"\x01" + addr_bytes
+                host = socket.inet_ntoa(addr_bytes)
+
+        packed += struct.pack(">H", port)
+        return packed, (host, port)
 
     def _negotiate_SOCKS4(self, dest_addr, dest_port):
         """
@@ -378,7 +396,7 @@ class socksocket(socket.socket):
         self.sendall(req)
 
         # Get the response from the server
-        resp = self._recvall(8)
+        resp = self._recvall(self, 8)
         if resp[0:1] != b"\x00":
             # Bad data
             raise GeneralProxyError("SOCKS4 proxy server sent invalid data")
@@ -472,17 +490,16 @@ class socksocket(socket.socket):
             _orig_socket.connect(self, (dest_addr, dest_port))
             return
 
-        proxy_port = proxy_port or DEFAULT_PORTS.get(proxy_type)
-        if not proxy_port:
-            raise GeneralProxyError("Invalid proxy type")
+        proxy_addr = self._proxy_addr()
 
         try:
             # Initial connection to proxy server
-            _orig_socket.connect(self, (proxy_addr, proxy_port))
+            _orig_socket.connect(self, proxy_addr)
 
         except socket.error as error:
             # Error while connecting to proxy
             self.close()
+            proxy_addr, proxy_port = proxy_addr
             proxy_server = "{0}:{1}".format(proxy_addr.decode(), proxy_port)
             printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
@@ -504,3 +521,13 @@ class socksocket(socket.socket):
                 # Protocol error while negotiating with proxy
                 self.close()
                 raise
+    
+    def _proxy_addr(self):
+        """
+        Return proxy address to connect to as tuple object
+        """
+        proxy_type, proxy_addr, proxy_port, rdns, username, password = self.proxy
+        proxy_port = proxy_port or DEFAULT_PORTS.get(proxy_type)
+        if not proxy_port:
+            raise GeneralProxyError("Invalid proxy type")
+        return proxy_addr, proxy_port
