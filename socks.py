@@ -56,6 +56,7 @@ __version__ = "1.5.1"
 
 import socket
 import struct
+from errno import EOPNOTSUPP, EINVAL
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
 PROXY_TYPE_SOCKS5 = SOCKS5 = 2
@@ -166,13 +167,19 @@ class socksocket(socket.socket):
 
     Open a SOCKS enabled socket. The parameters are the same as
     those of the standard socket init. In order for SOCKS to work,
-    you must specify family=AF_INET, type=SOCK_STREAM and proto=0.
+    you must specify family=AF_INET and proto=0.
+    The "type" argument must be either SOCK_STREAM or SOCK_DGRAM.
     """
 
     default_proxy = None
 
     def __init__(self, family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, _sock=None):
+        if type not in {socket.SOCK_STREAM, socket.SOCK_DGRAM}:
+            msg = "Socket type must be stream or datagram, not {!r}"
+            raise ValueError(msg.format(type))
+        
         _orig_socket.__init__(self, family, type, proto, _sock)
+        self._proxyconn = None  # TCP connection to keep UDP relay alive
 
         if self.default_proxy:
             self.proxy = self.default_proxy
@@ -217,6 +224,47 @@ class socksocket(socket.socket):
                       password.encode() if password else None)
 
     setproxy = set_proxy
+    
+    def bind(self, *pos, **kw):
+        """
+        Implements proxy connection for UDP sockets,
+        which happens during the bind() phase.
+        """
+        proxy_type, proxy_addr, proxy_port, rdns, username, password = self.proxy
+        if not proxy_type or self.type != socket.SOCK_DGRAM:
+            return _orig_socket.bind(self, *pos, **kw)
+        
+        if self._proxyconn:
+            raise socket.error(EINVAL, "Socket already bound to an address")
+        if proxy_type != SOCKS5:
+            msg = "UDP only supported by SOCKS5 proxy type"
+            raise socket.error(EOPNOTSUPP, msg)
+        _orig_socket.bind(self, *pos, **kw)
+        
+        # Need to specify actual local port because
+        # some relays drop packets if a port of zero is specified
+        _, port = self.getsockname()
+        
+        self._proxyconn = _orig_socket()
+        self._proxyconn.connect(self._proxy_addr())
+        UDP_ASSOCIATE = b"\x03"
+        self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, ("0", port))
+        _orig_socket.connect(self, self.proxy_sockname)
+    
+    def sendto(self, bytes, address):
+        if not self._proxyconn:
+            self.bind(("", 0))
+        
+        RSV = b"\x00\x00"
+        STANDALONE = b"\x00"
+        dst, _ = self._SOCKS5_address(address)
+        header = RSV + STANDALONE + dst
+        return self.send(header + bytes) - len(header)
+    
+    def close(self):
+        if self._proxyconn:
+            self._proxyconn.close()
+        return _orig_socket.close(self)
 
     def get_proxy_sockname(self):
         """
