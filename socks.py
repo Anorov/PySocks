@@ -252,9 +252,14 @@ class socksocket(socket.socket):
         self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, ("0", port))
         _orig_socket.connect(self, self.proxy_sockname)
     
-    def sendto(self, bytes, address):
+    def sendto(self, bytes, *args):
+        if self.type != socket.SOCK_DGRAM:
+            return _orig_socket.sendto(self, bytes, *args)
         if not self._proxyconn:
             self.bind(("", 0))
+        
+        address = args[-1]
+        flags = args[:-1]
         
         header = BytesIO()
         RSV = b"\x00\x00"
@@ -263,14 +268,16 @@ class socksocket(socket.socket):
         header.write(STANDALONE)
         self._write_SOCKS5_address(address, header)
         
-        sent = _orig_socket.send(self, header.getvalue() + bytes)
+        sent = _orig_socket.send(self, header.getvalue() + bytes, *flags)
         return sent - header.tell()
     
-    def recvfrom(self, bufsize):
+    def recvfrom(self, bufsize, flags=0):
+        if self.type != socket.SOCK_DGRAM:
+            return _orig_socket.recvfrom(self, bufsize, flags)
         if not self._proxyconn:
             self.bind(("", 0))
         
-        buf = BytesIO(_orig_socket.recv(self, bufsize))
+        buf = BytesIO(_orig_socket.recv(self, bufsize, flags))
         buf.seek(+2, SEEK_CUR)
         frag = buf.read(1)
         if ord(frag):
