@@ -56,7 +56,7 @@ __version__ = "1.5.1"
 
 import socket
 import struct
-from errno import EOPNOTSUPP, EINVAL
+from errno import EOPNOTSUPP, EINVAL, EAGAIN
 from io import BytesIO, SEEK_CUR
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
@@ -271,6 +271,12 @@ class socksocket(socket.socket):
         sent = _orig_socket.send(self, header.getvalue() + bytes, *flags)
         return sent - header.tell()
     
+    def send(self, bytes, flags=0):
+        if self.type == socket.SOCK_DGRAM:
+            return self.sendto(bytes, flags, self.proxy_peername)
+        else:
+            return _orig_socket.send(self, bytes, flags)
+    
     def recvfrom(self, bufsize, flags=0):
         if self.type != socket.SOCK_DGRAM:
             return _orig_socket.recvfrom(self, bufsize, flags)
@@ -282,8 +288,19 @@ class socksocket(socket.socket):
         frag = buf.read(1)
         if ord(frag):
             raise NotImplementedError("Received UDP packet fragment")
-        addr = self._read_SOCKS5_address(buf)
-        return (buf.read(), addr)
+        fromhost, fromport = self._read_SOCKS5_address(buf)
+        
+        peerhost, peerport = self.proxy_peername
+        filterhost = socket.inet_pton(self.family, peerhost).strip(b"\x00")
+        filterhost = filterhost and fromhost != peerhost
+        if filterhost or peerport not in (0, fromport):
+            raise socket.error(EAGAIN, "Packet filtered")
+        
+        return (buf.read(), (fromhost, fromport))
+    
+    def recv(self, *pos, **kw):
+        bytes, _ = self.recvfrom(*pos, **kw)
+        return bytes
     
     def close(self):
         if self._proxyconn:
@@ -564,8 +581,16 @@ class socksocket(socket.socket):
 
         dest_pair - 2-tuple of (IP/hostname, port).
         """
-        proxy_type, proxy_addr, proxy_port, rdns, username, password = self.proxy
         dest_addr, dest_port = dest_pair
+        
+        if self.type == socket.SOCK_DGRAM:
+            if not self._proxyconn:
+                self.bind(("", 0))
+            dest_addr = socket.gethostbyname(dest_addr)
+            self.proxy_peername = (dest_addr, dest_port)
+            return
+        
+        proxy_type, proxy_addr, proxy_port, rdns, username, password = self.proxy
 
         # Do a minimal input check first
         if (not isinstance(dest_pair, (list, tuple))
