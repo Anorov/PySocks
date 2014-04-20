@@ -249,10 +249,17 @@ class socksocket(socket.socket):
         dst = ("0", port)
         
         self._proxyconn = _orig_socket()
-        self._proxyconn.connect(self._proxy_addr())
+        proxy = self._proxy_addr()
+        self._proxyconn.connect(proxy)
+        
         UDP_ASSOCIATE = b"\x03"
         _, relay = self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, dst)
-        _orig_socket.connect(self, relay)
+        
+        # The relay is most likely on the same host as the SOCKS proxy,
+        # but some proxies return a private IP address (10.x.y.z)
+        host, _ = proxy
+        _, port = relay
+        _orig_socket.connect(self, (host, port))
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
     
     def sendto(self, bytes, *args):
