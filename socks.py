@@ -243,14 +243,17 @@ class socksocket(socket.socket):
         _orig_socket.bind(self, *pos, **kw)
         
         # Need to specify actual local port because
-        # some relays drop packets if a port of zero is specified
+        # some relays drop packets if a port of zero is specified.
+        # Avoid specifying host address in case of NAT though.
         _, port = self.getsockname()
+        dst = ("0", port)
         
         self._proxyconn = _orig_socket()
         self._proxyconn.connect(self._proxy_addr())
         UDP_ASSOCIATE = b"\x03"
-        self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, ("0", port))
-        _orig_socket.connect(self, self.proxy_sockname)
+        _, relay = self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, dst)
+        _orig_socket.connect(self, relay)
+        self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
     
     def sendto(self, bytes, *args):
         if self.type != socket.SOCK_DGRAM:
@@ -337,7 +340,8 @@ class socksocket(socket.socket):
         Negotiates a stream connection through a SOCKS5 server.
         """
         CONNECT = b"\x01"
-        self.proxy_peername = self._SOCKS5_request(self, CONNECT, dest_addr)
+        self.proxy_peername, self.proxy_sockname = self._SOCKS5_request(self,
+            CONNECT, dest_addr)
     
     def _SOCKS5_request(self, conn, cmd, dst):
         """
@@ -415,8 +419,8 @@ class socksocket(socket.socket):
                 raise SOCKS5Error("{0:#04x}: {1}".format(status, error))
 
             # Get the bound address/port
-            self.proxy_sockname = self._read_SOCKS5_address(reader)
-            return resolved
+            bnd = self._read_SOCKS5_address(reader)
+            return (resolved, bnd)
         finally:
             reader.close()
             writer.close()
