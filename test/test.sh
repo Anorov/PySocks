@@ -1,4 +1,7 @@
 #!/bin/bash
+shopt -s expand_aliases
+type python2 >/dev/null 2>&1 || alias python2='python'
+
 echo "Starting proxy servers..."
 python2 socks4server.py > /dev/null &
 python2 httpproxy.py > /dev/null &

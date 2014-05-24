@@ -6,7 +6,7 @@ import socket
 PY3K = sys.version_info[0] == 3
 
 if PY3K:
-    import urllib.request as urllib2    
+    import urllib.request as urllib2
 else:
     import sockshandler
     import urllib2
