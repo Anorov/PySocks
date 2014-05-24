@@ -3,7 +3,7 @@ sys.path.append("..")
 import socks
 import socket
 
-PY3K = sys.version_info.major == 3
+PY3K = sys.version_info[0] == 3
 
 if PY3K:
     import urllib.request as urllib2    
