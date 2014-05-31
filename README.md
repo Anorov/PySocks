@@ -103,6 +103,7 @@ uses TCP.
 
 This Python module allows you to create TCP connections through a SOCKS
 proxy without any special effort.
+It also supports relaying UDP packets with a SOCKS5 proxy.
 
 *PROXY COMPATIBILITY*
 
@@ -139,7 +140,8 @@ The socks module provides a class called `socksocket`, which is the base to
 all of the module's functionality.
 The `socksocket` object has the same initialization parameters as the normal socket
 object to ensure maximal compatibility, however it should be noted that `socksocket`
-will only function with family being `AF_INET` and type being `SOCK_STREAM`.
+will only function with family being `AF_INET` and
+type being either `SOCK_STREAM` or `SOCK_DGRAM`.
 Generally, it is best to initialize the `socksocket` object with no parameters
 
     >>> s = socks.socksocket()
@@ -249,8 +251,8 @@ had replied with a destination host unreachable error.
 * `0x06` - TTL expired - The TTL value of the SYN packet from the proxy to the target server
 has expired. This usually means that there are network problems causing the packet
 to be caught in a router-to-router "ping-pong".
-* `0x07` - Command not supported - The client has issued an invalid command. When using this
-module, this error should not occur.
+* `0x07` - Command not supported -
+For instance if the server does not support UDP.
 * `0x08` - Address type not supported - The client has provided an invalid address type.
 When using this module, this error should not occur.
 
