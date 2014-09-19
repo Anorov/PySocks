@@ -3,7 +3,7 @@ PySocks
 
 Updated version of SocksiPy. Many old bugs fixed, and overall code cleanup.
 
-**Version:** 1.5.0
+**Version:** 1.5.1
 
 ----------------
 

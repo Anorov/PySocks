@@ -1,6 +1,6 @@
 """
 SocksiPy - Python SOCKS module.
-Version 1.5.0
+Version 1.5.1
 
 Copyright 2006 Dan-Haim. All rights reserved.
 
