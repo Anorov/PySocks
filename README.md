@@ -12,6 +12,8 @@ Features
 
 * Fully supports Python 2.6 - 3.4
 
+* UDP support
+
 * SocksiPyHandler, courtesy e000, was also added as an example of how this module can be used with urllib2. See example code in sockshandler.py.
 
 * Bugs in the original SocksiPy were fixed, including two that could lead to infinite hanging when communicating with bad proxy servers.
@@ -30,11 +32,11 @@ Installation
 ============
 
     pip install PySocks
-    
+
 Or download the tarball / `git clone` and...
 
     python setup.py install
-    
+
 Alternatively, include just `socks.py` in your project.
 
 --------------------------------------------
@@ -49,9 +51,9 @@ Usage
 ## Example ##
 
     import socks
-    
+
     s = socks.socksocket()
-    
+
     s.set_proxy(socks.SOCKS5, "localhost") # SOCKS4 and SOCKS5 use port 1080 by default
     # Or
     s.set_proxy(socks.SOCKS4, "localhost", 4444)
@@ -69,16 +71,16 @@ To monkeypatch the entire standard library with a single default proxy:
     import socket
     import socks
     import urllib2
-    
+
     socks.set_default_proxy(socks.SOCKS5, "localhost")
     socket.socket = socks.socksocket
-    
+
     urllib2.urlopen("http://...") # All requests will pass through the SOCKS proxy
-    
+
 Note that monkeypatching may not work for all standard modules or for all third party modules, and generally isn't recommended.
-    
+
 --------------------------------------------
-    
+
 Original SocksiPy README attached below, amended to reflect API changes.
 
 --------------------------------------------
@@ -136,11 +138,10 @@ First load the socks module with the command:
     >>> import socks
     >>>
 
-The socks module provides a class called `socksocket`, which is the base to
-all of the module's functionality.
+The socks module provides a class called `socksocket`, which is the base to all of the module's functionality.
+
 The `socksocket` object has the same initialization parameters as the normal socket
-object to ensure maximal compatibility, however it should be noted that `socksocket`
-will only function with family being `AF_INET` and
+object to ensure maximal compatibility, however it should be noted that `socksocket` will only function with family being `AF_INET` and
 type being either `SOCK_STREAM` or `SOCK_DGRAM`.
 Generally, it is best to initialize the `socksocket` object with no parameters
 
@@ -251,8 +252,7 @@ had replied with a destination host unreachable error.
 * `0x06` - TTL expired - The TTL value of the SYN packet from the proxy to the target server
 has expired. This usually means that there are network problems causing the packet
 to be caught in a router-to-router "ping-pong".
-* `0x07` - Command not supported -
-For instance if the server does not support UDP.
+* `0x07` - Command not supported - For instance if the server does not support UDP.
 * `0x08` - Address type not supported - The client has provided an invalid address type.
 When using this module, this error should not occur.
 
@@ -266,7 +266,7 @@ reason other then the two mentioned next.
 The Socks server had tried an ident lookup on your computer and has failed. In this
 case you should run an identd server and/or configure your firewall to allow incoming
 connections to local port 113 from the remote server.
-* `0x5D` - request rejected because the client program and identd report different user-ids - 
+* `0x5D` - request rejected because the client program and identd report different user-ids -
 The Socks server had performed an ident lookup on your computer and has received a
 different userid than the one you have provided. Change your userid (through the
 username parameter of the set_proxy method) to match and try again.

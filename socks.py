@@ -169,19 +169,19 @@ class _BaseSocket(socket.socket):
     """
     def __init__(self, *pos, **kw):
         _orig_socket.__init__(self, *pos, **kw)
-        
+
         self._savedmethods = dict()
         for name in self._savenames:
             self._savedmethods[name] = getattr(self, name)
             delattr(self, name)  # Allows normal overriding mechanism to work
-    
+
     _savenames = list()
 
 def _makemethod(name):
     return lambda self, *pos, **kw: self._savedmethods[name](*pos, **kw)
 for name in ("sendto", "send", "recvfrom", "recv"):
     method = getattr(_BaseSocket, name, None)
-    
+
     # Determine if the method is not defined the usual way
     # as a function in the class.
     # Python 2 uses __slots__, so there are descriptors for each method,
@@ -205,7 +205,7 @@ class socksocket(_BaseSocket):
         if type not in {socket.SOCK_STREAM, socket.SOCK_DGRAM}:
             msg = "Socket type must be stream or datagram, not {!r}"
             raise ValueError(msg.format(type))
-        
+
         _BaseSocket.__init__(self, family, type, proto, _sock)
         self._proxyconn = None  # TCP connection to keep UDP relay alive
 
@@ -252,7 +252,7 @@ class socksocket(_BaseSocket):
                       password.encode() if password else None)
 
     setproxy = set_proxy
-    
+
     def bind(self, *pos, **kw):
         """
         Implements proxy connection for UDP sockets,
@@ -261,84 +261,84 @@ class socksocket(_BaseSocket):
         proxy_type, proxy_addr, proxy_port, rdns, username, password = self.proxy
         if not proxy_type or self.type != socket.SOCK_DGRAM:
             return _orig_socket.bind(self, *pos, **kw)
-        
+
         if self._proxyconn:
             raise socket.error(EINVAL, "Socket already bound to an address")
         if proxy_type != SOCKS5:
             msg = "UDP only supported by SOCKS5 proxy type"
             raise socket.error(EOPNOTSUPP, msg)
         _BaseSocket.bind(self, *pos, **kw)
-        
+
         # Need to specify actual local port because
         # some relays drop packets if a port of zero is specified.
         # Avoid specifying host address in case of NAT though.
         _, port = self.getsockname()
         dst = ("0", port)
-        
+
         self._proxyconn = _orig_socket()
         proxy = self._proxy_addr()
         self._proxyconn.connect(proxy)
-        
+
         UDP_ASSOCIATE = b"\x03"
         _, relay = self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, dst)
-        
+
         # The relay is most likely on the same host as the SOCKS proxy,
         # but some proxies return a private IP address (10.x.y.z)
         host, _ = proxy
         _, port = relay
         _BaseSocket.connect(self, (host, port))
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
-    
+
     def sendto(self, bytes, *args):
         if self.type != socket.SOCK_DGRAM:
             return _BaseSocket.sendto(self, bytes, *args)
         if not self._proxyconn:
             self.bind(("", 0))
-        
+
         address = args[-1]
         flags = args[:-1]
-        
+
         header = BytesIO()
         RSV = b"\x00\x00"
         header.write(RSV)
         STANDALONE = b"\x00"
         header.write(STANDALONE)
         self._write_SOCKS5_address(address, header)
-        
+
         sent = _BaseSocket.send(self, header.getvalue() + bytes, *flags)
         return sent - header.tell()
-    
+
     def send(self, bytes, flags=0):
         if self.type == socket.SOCK_DGRAM:
             return self.sendto(bytes, flags, self.proxy_peername)
         else:
             return _BaseSocket.send(self, bytes, flags)
-    
+
     def recvfrom(self, bufsize, flags=0):
         if self.type != socket.SOCK_DGRAM:
             return _BaseSocket.recvfrom(self, bufsize, flags)
         if not self._proxyconn:
             self.bind(("", 0))
-        
+
         buf = BytesIO(_BaseSocket.recv(self, bufsize, flags))
         buf.seek(+2, SEEK_CUR)
         frag = buf.read(1)
         if ord(frag):
             raise NotImplementedError("Received UDP packet fragment")
         fromhost, fromport = self._read_SOCKS5_address(buf)
-        
+
         peerhost, peerport = self.proxy_peername
         filterhost = socket.inet_pton(self.family, peerhost).strip(b"\x00")
         filterhost = filterhost and fromhost != peerhost
         if filterhost or peerport not in (0, fromport):
             raise socket.error(EAGAIN, "Packet filtered")
-        
+
         return (buf.read(), (fromhost, fromport))
-    
+
     def recv(self, *pos, **kw):
         bytes, _ = self.recvfrom(*pos, **kw)
         return bytes
-    
+
     def close(self):
         if self._proxyconn:
             self._proxyconn.close()
@@ -376,7 +376,7 @@ class socksocket(_BaseSocket):
         CONNECT = b"\x01"
         self.proxy_peername, self.proxy_sockname = self._SOCKS5_request(self,
             CONNECT, dest_addr)
-    
+
     def _SOCKS5_request(self, conn, cmd, dst):
         """
         Send SOCKS5 request with given command (CMD field) and
@@ -458,7 +458,7 @@ class socksocket(_BaseSocket):
         finally:
             reader.close()
             writer.close()
-    
+
     def _write_SOCKS5_address(self, addr, file):
         """
         Return the host and port packed for the SOCKS5 protocol,
@@ -466,7 +466,7 @@ class socksocket(_BaseSocket):
         """
         host, port = addr
         proxy_type, _, _, rdns, username, password = self.proxy
-        
+
         # If the given destination address is an IP address, we'll
         # use the IPv4 address request even if remote resolving was specified.
         try:
@@ -486,7 +486,7 @@ class socksocket(_BaseSocket):
 
         file.write(struct.pack(">H", port))
         return host, port
-    
+
     def _read_SOCKS5_address(self, file):
         atyp = self._readall(file, 1)
         if atyp == b"\x01":
@@ -620,14 +620,14 @@ class socksocket(_BaseSocket):
         dest_pair - 2-tuple of (IP/hostname, port).
         """
         dest_addr, dest_port = dest_pair
-        
+
         if self.type == socket.SOCK_DGRAM:
             if not self._proxyconn:
                 self.bind(("", 0))
             dest_addr = socket.gethostbyname(dest_addr)
             self.proxy_peername = (dest_addr, dest_port)
             return
-        
+
         proxy_type, proxy_addr, proxy_port, rdns, username, password = self.proxy
 
         # Do a minimal input check first
@@ -674,7 +674,7 @@ class socksocket(_BaseSocket):
                 # Protocol error while negotiating with proxy
                 self.close()
                 raise
-    
+
     def _proxy_addr(self):
         """
         Return proxy address to connect to as tuple object
