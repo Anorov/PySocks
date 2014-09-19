@@ -289,9 +289,9 @@ class socksocket(_BaseSocket):
         _BaseSocket.connect(self, (host, port))
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
 
-    def sendto(self, bytes, *args):
+    def sendto(self, bytes, *args, **kwargs):
         if self.type != socket.SOCK_DGRAM:
-            return _BaseSocket.sendto(self, bytes, *args)
+            return _BaseSocket.sendto(self, bytes, *args, **kwargs)
         if not self._proxyconn:
             self.bind(("", 0))
 
@@ -305,14 +305,14 @@ class socksocket(_BaseSocket):
         header.write(STANDALONE)
         self._write_SOCKS5_address(address, header)
 
-        sent = _BaseSocket.send(self, header.getvalue() + bytes, *flags)
+        sent = _BaseSocket.send(self, header.getvalue() + bytes, *flags, **kwargs)
         return sent - header.tell()
 
-    def send(self, bytes, flags=0):
+    def send(self, bytes, flags=0, **kwargs):
         if self.type == socket.SOCK_DGRAM:
-            return self.sendto(bytes, flags, self.proxy_peername)
+            return self.sendto(bytes, flags, self.proxy_peername, **kwargs)
         else:
-            return _BaseSocket.send(self, bytes, flags)
+            return _BaseSocket.send(self, bytes, flags, **kwargs)
 
     def recvfrom(self, bufsize, flags=0):
         if self.type != socket.SOCK_DGRAM:
