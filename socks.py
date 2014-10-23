@@ -327,11 +327,10 @@ class socksocket(_BaseSocket):
             raise NotImplementedError("Received UDP packet fragment")
         fromhost, fromport = self._read_SOCKS5_address(buf)
 
-        peerhost, peerport = self.proxy_peername
-        filterhost = socket.inet_pton(self.family, peerhost).strip(b"\x00")
-        filterhost = filterhost and fromhost != peerhost
-        if filterhost or peerport not in (0, fromport):
-            raise socket.error(EAGAIN, "Packet filtered")
+        if self.proxy_peername:
+            peerhost, peerport = self.proxy_peername
+            if fromhost != peerhost or peerport not in (0, fromport):
+                raise socket.error(EAGAIN, "Packet filtered")
 
         return (buf.read(), (fromhost, fromport))
 
@@ -625,7 +624,14 @@ class socksocket(_BaseSocket):
             if not self._proxyconn:
                 self.bind(("", 0))
             dest_addr = socket.gethostbyname(dest_addr)
-            self.proxy_peername = (dest_addr, dest_port)
+            
+            # If the host address is INADDR_ANY or similar, reset the peer
+            # address so that packets are received from any peer
+            any = not socket.inet_pton(self.family, dest_addr).strip(b"\x00")
+            if any and not dest_port:
+                self.proxy_peername = None
+            else:
+                self.proxy_peername = (dest_addr, dest_port)
             return
 
         proxy_type, proxy_addr, proxy_port, rdns, username, password = self.proxy
