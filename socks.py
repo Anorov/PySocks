@@ -627,8 +627,7 @@ class socksocket(_BaseSocket):
             
             # If the host address is INADDR_ANY or similar, reset the peer
             # address so that packets are received from any peer
-            any = not socket.inet_pton(self.family, dest_addr).strip(b"\x00")
-            if any and not dest_port:
+            if dest_addr == "0.0.0.0" and not dest_port:
                 self.proxy_peername = None
             else:
                 self.proxy_peername = (dest_addr, dest_port)
