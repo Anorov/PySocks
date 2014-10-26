@@ -116,7 +116,7 @@ def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username
     Sets a default proxy which all further socksocket objects will use,
     unless explicitly changed. All parameters are as for socket.set_proxy().
     """
-    socksocket.default_proxy = (proxy_type, addr.encode(), port, rdns,
+    socksocket.default_proxy = (proxy_type, addr, port, rdns,
                                 username.encode() if username else None,
                                 password.encode() if password else None)
 
@@ -247,7 +247,7 @@ class socksocket(_BaseSocket):
         password -    Password to authenticate with to the server.
                        Only relevant when username is also provided.
         """
-        self.proxy = (proxy_type, addr.encode(), port, rdns,
+        self.proxy = (proxy_type, addr, port, rdns,
                       username.encode() if username else None,
                       password.encode() if password else None)
 
@@ -658,7 +658,7 @@ class socksocket(_BaseSocket):
             # Error while connecting to proxy
             self.close()
             proxy_addr, proxy_port = proxy_addr
-            proxy_server = "{0}:{1}".format(proxy_addr.decode(), proxy_port)
+            proxy_server = "{0}:{1}".format(proxy_addr, proxy_port)
             printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
             msg = "Error connecting to {0} proxy {1}".format(printable_type,
