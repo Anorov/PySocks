@@ -476,7 +476,8 @@ class socksocket(_BaseSocket):
             # Well it's not an IP number, so it's probably a DNS name.
             if rdns:
                 # Resolve remotely
-                file.write(b"\x03" + chr(len(host)).encode() + host.encode())
+                host_bytes = host.encode('idna')
+                file.write(b"\x03" + chr(len(host_bytes)).encode() + host_bytes)
             else:
                 # Resolve locally
                 addr_bytes = socket.inet_aton(socket.gethostbyname(host))
@@ -533,7 +534,7 @@ class socksocket(_BaseSocket):
             # NOTE: This is actually an extension to the SOCKS4 protocol
             # called SOCKS4A and may not be supported in all cases.
             if remote_resolve:
-                writer.write(dest_addr.encode() + b"\x00")
+                writer.write(dest_addr.encode('idna') + b"\x00")
             writer.flush()
 
             # Get the response from the server
@@ -568,8 +569,8 @@ class socksocket(_BaseSocket):
         # If we need to resolve locally, we do this now
         addr = dest_addr if rdns else socket.gethostbyname(dest_addr)
 
-        self.sendall(b"CONNECT " + addr.encode() + b":" + str(dest_port).encode() +
-                     b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode() + b"\r\n\r\n")
+        self.sendall(b"CONNECT " + addr.encode('idna') + b":" + str(dest_port).encode() +
+                     b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode('idna') + b"\r\n\r\n")
 
         # We just need the first line to check if the connection was successful
         fobj = self.makefile()
