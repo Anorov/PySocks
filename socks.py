@@ -116,7 +116,7 @@ def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username
     Sets a default proxy which all further socksocket objects will use,
     unless explicitly changed. All parameters are as for socket.set_proxy().
     """
-    socksocket.default_proxy = (proxy_type, addr.encode(), port, rdns,
+    socksocket.default_proxy = (proxy_type, addr, port, rdns,
                                 username.encode() if username else None,
                                 password.encode() if password else None)
 
@@ -247,7 +247,7 @@ class socksocket(_BaseSocket):
         password -    Password to authenticate with to the server.
                        Only relevant when username is also provided.
         """
-        self.proxy = (proxy_type, addr.encode(), port, rdns,
+        self.proxy = (proxy_type, addr, port, rdns,
                       username.encode() if username else None,
                       password.encode() if password else None)
 
@@ -476,7 +476,8 @@ class socksocket(_BaseSocket):
             # Well it's not an IP number, so it's probably a DNS name.
             if rdns:
                 # Resolve remotely
-                file.write(b"\x03" + chr(len(host)).encode() + host.encode())
+                host_bytes = host.encode('idna')
+                file.write(b"\x03" + chr(len(host_bytes)).encode() + host_bytes)
             else:
                 # Resolve locally
                 addr_bytes = socket.inet_aton(socket.gethostbyname(host))
@@ -533,7 +534,7 @@ class socksocket(_BaseSocket):
             # NOTE: This is actually an extension to the SOCKS4 protocol
             # called SOCKS4A and may not be supported in all cases.
             if remote_resolve:
-                writer.write(dest_addr.encode() + b"\x00")
+                writer.write(dest_addr.encode('idna') + b"\x00")
             writer.flush()
 
             # Get the response from the server
@@ -568,8 +569,8 @@ class socksocket(_BaseSocket):
         # If we need to resolve locally, we do this now
         addr = dest_addr if rdns else socket.gethostbyname(dest_addr)
 
-        self.sendall(b"CONNECT " + addr.encode() + b":" + str(dest_port).encode() +
-                     b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode() + b"\r\n\r\n")
+        self.sendall(b"CONNECT " + addr.encode('idna') + b":" + str(dest_port).encode() +
+                     b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode('idna') + b"\r\n\r\n")
 
         # We just need the first line to check if the connection was successful
         fobj = self.makefile()
@@ -658,7 +659,7 @@ class socksocket(_BaseSocket):
             # Error while connecting to proxy
             self.close()
             proxy_addr, proxy_port = proxy_addr
-            proxy_server = "{0}:{1}".format(proxy_addr.decode(), proxy_port)
+            proxy_server = "{0}:{1}".format(proxy_addr, proxy_port)
             printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
             msg = "Error connecting to {0} proxy {1}".format(printable_type,
