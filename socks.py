@@ -647,6 +647,7 @@ class socksocket(_BaseSocket):
 
         if proxy_type is None:
             # Treat like regular socket object
+            self.proxy_peername = dest_pair
             _BaseSocket.connect(self, (dest_addr, dest_port))
             return
 
