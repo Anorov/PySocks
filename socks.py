@@ -147,7 +147,8 @@ wrapmodule = wrap_module
 
 def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
                       proxy_port=None, proxy_username=None,
-                      proxy_password=None, timeout=None):
+                      proxy_password=None, timeout=None,
+                      source_address=None):
     """create_connection(dest_pair, *[, timeout], **proxy_args) -> socket object
 
     Like socket.create_connection(), but connects to proxy
@@ -156,6 +157,8 @@ def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
     dest_pair - 2-tuple of (IP/hostname, port).
     **proxy_args - Same args passed to socksocket.set_proxy() if present.
     timeout - Optional socket timeout value, in seconds.
+    source_address - tuple (host, port) for the socket to bind to as its source
+    address before connecting (only for compatibility)
     """
     sock = socksocket()
     if isinstance(timeout, (int, float)):
