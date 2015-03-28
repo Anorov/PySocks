@@ -147,21 +147,25 @@ wrapmodule = wrap_module
 
 def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
                       proxy_port=None, proxy_username=None,
-                      proxy_password=None, timeout=None):
+                      proxy_password=None, timeout=None,
+                      source_address=None):
     """create_connection(dest_pair, *[, timeout], **proxy_args) -> socket object
 
     Like socket.create_connection(), but connects to proxy
     before returning the socket object.
 
     dest_pair - 2-tuple of (IP/hostname, port).
-    **proxy_args - Same args passed to socksocket.set_proxy().
+    **proxy_args - Same args passed to socksocket.set_proxy() if present.
     timeout - Optional socket timeout value, in seconds.
+    source_address - tuple (host, port) for the socket to bind to as its source
+    address before connecting (only for compatibility)
     """
     sock = socksocket()
     if isinstance(timeout, (int, float)):
         sock.settimeout(timeout)
-    sock.set_proxy(proxy_type, proxy_addr, proxy_port,
-                   proxy_username, proxy_password)
+    if proxy_type is not None:
+        sock.set_proxy(proxy_type, proxy_addr, proxy_port,
+                       proxy_username, proxy_password)
     sock.connect(dest_pair)
     return sock
 
@@ -626,7 +630,7 @@ class socksocket(_BaseSocket):
             if not self._proxyconn:
                 self.bind(("", 0))
             dest_addr = socket.gethostbyname(dest_addr)
-            
+
             # If the host address is INADDR_ANY or similar, reset the peer
             # address so that packets are received from any peer
             if dest_addr == "0.0.0.0" and not dest_port:
