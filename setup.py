@@ -11,6 +11,6 @@ setup(
     license = "BSD",
     author_email = "anorov.vorona@gmail.com",
     keywords = ["socks", "proxy"],
-    py_modules=["socks"]
+    py_modules=["socks", "sockshandler"]
 )
 
