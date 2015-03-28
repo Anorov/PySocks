@@ -3,7 +3,7 @@ PySocks
 
 Updated version of SocksiPy. Many old bugs fixed, and overall code cleanup.
 
-**Version:** 1.5.1
+Acts as a drop-in replacement to the socket module.
 
 ----------------
 
