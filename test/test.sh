@@ -8,8 +8,13 @@ python2 httpproxy.py > /dev/null &
 ./mocks start
 
 sleep 2
-echo "Python 2.x tests"
-python2 sockstest.py
+echo "Python 2.6 tests"
+python2.6 sockstest.py
+exit
+
+sleep 2
+echo "Python 2.7 tests"
+python2.7 sockstest.py
 
 sleep 2
 echo "Python 3.x tests"

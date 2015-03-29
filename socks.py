@@ -57,7 +57,8 @@ __version__ = "1.5.2"
 import socket
 import struct
 from errno import EOPNOTSUPP, EINVAL, EAGAIN
-from io import BytesIO, SEEK_CUR
+from io import BytesIO
+from os import SEEK_CUR
 from collections import Callable
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
@@ -207,7 +208,7 @@ class socksocket(_BaseSocket):
     default_proxy = None
 
     def __init__(self, family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, _sock=None):
-        if type not in {socket.SOCK_STREAM, socket.SOCK_DGRAM}:
+        if type not in (socket.SOCK_STREAM, socket.SOCK_DGRAM):
             msg = "Socket type must be stream or datagram, not {!r}"
             raise ValueError(msg.format(type))
 
