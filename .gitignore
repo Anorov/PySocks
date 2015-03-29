@@ -24,3 +24,4 @@ var/
 .installed.cfg
 *.egg
 MANIFEST
+MANIFEST.in
