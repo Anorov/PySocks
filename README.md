@@ -14,7 +14,7 @@ Features
 
 * UDP support
 
-* SocksiPyHandler, courtesy e000, was also added as an example of how this module can be used with urllib2. See example code in sockshandler.py.
+* SocksiPyHandler, courtesy e000, was also added as an example of how this module can be used with urllib2. See example code in sockshandler.py. `pip install` and `setup.py install` will automatically install the `sockshandler` module.
 
 * Bugs in the original SocksiPy were fixed, including two that could lead to infinite hanging when communicating with bad proxy servers.
 
@@ -36,6 +36,8 @@ Installation
 Or download the tarball / `git clone` and...
 
     python setup.py install
+
+These will install both the `socks` and `sockshandler`.
 
 Alternatively, include just `socks.py` in your project.
 
