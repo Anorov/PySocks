@@ -37,7 +37,7 @@ Or download the tarball / `git clone` and...
 
     python setup.py install
 
-These will install both the `socks` and `sockshandler`.
+These will install both the `socks` and `sockshandler` modules.
 
 Alternatively, include just `socks.py` in your project.
 
