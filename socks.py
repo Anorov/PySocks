@@ -1,6 +1,6 @@
 """
 SocksiPy - Python SOCKS module.
-Version 1.5.3
+Version 1.5.4
 
 Copyright 2006 Dan-Haim. All rights reserved.
 
@@ -52,7 +52,7 @@ Modifications made by Anorov (https://github.com/Anorov)
 -Various small bug fixes
 """
 
-__version__ = "1.5.3"
+__version__ = "1.5.4"
 
 import socket
 import struct
@@ -147,9 +147,9 @@ def wrap_module(module):
 wrapmodule = wrap_module
 
 def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
-                      proxy_port=None, proxy_username=None,
-                      proxy_password=None, timeout=None,
-                      source_address=None):
+                      proxy_port=None, proxy_rdns=True,
+                      proxy_username=None, proxy_password=None,
+                      timeout=None, source_address=None):
     """create_connection(dest_pair, *[, timeout], **proxy_args) -> socket object
 
     Like socket.create_connection(), but connects to proxy
@@ -165,7 +165,7 @@ def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
     if isinstance(timeout, (int, float)):
         sock.settimeout(timeout)
     if proxy_type is not None:
-        sock.set_proxy(proxy_type, proxy_addr, proxy_port,
+        sock.set_proxy(proxy_type, proxy_addr, proxy_port, proxy_rdns,
                        proxy_username, proxy_password)
     sock.connect(dest_pair)
     return sock
