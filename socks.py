@@ -207,12 +207,12 @@ class socksocket(_BaseSocket):
 
     default_proxy = None
 
-    def __init__(self, family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, _sock=None):
+    def __init__(self, family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0, *args, **kwargs):
         if type not in (socket.SOCK_STREAM, socket.SOCK_DGRAM):
             msg = "Socket type must be stream or datagram, not {!r}"
             raise ValueError(msg.format(type))
 
-        _BaseSocket.__init__(self, family, type, proto, _sock)
+        _BaseSocket.__init__(self, family, type, proto, *args, **kwargs)
         self._proxyconn = None  # TCP connection to keep UDP relay alive
 
         if self.default_proxy:
