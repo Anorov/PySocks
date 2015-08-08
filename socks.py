@@ -1,6 +1,6 @@
 """
 SocksiPy - Python SOCKS module.
-Version 1.5.4
+Version 1.5.5
 
 Copyright 2006 Dan-Haim. All rights reserved.
 
@@ -52,7 +52,7 @@ Modifications made by Anorov (https://github.com/Anorov)
 -Various small bug fixes
 """
 
-__version__ = "1.5.4"
+__version__ = "1.5.5"
 
 import socket
 import struct
@@ -167,6 +167,8 @@ def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
     if proxy_type is not None:
         sock.set_proxy(proxy_type, proxy_addr, proxy_port, proxy_rdns,
                        proxy_username, proxy_password)
+    if source_address is not None:
+        sock.bind(source_address)
     sock.connect(dest_pair)
     return sock
 
@@ -625,11 +627,11 @@ class socksocket(_BaseSocket):
 
         dest_pair - 2-tuple of (IP/hostname, port).
         """
-        if len(dest_pair) != 2:
+        if len(dest_pair) != 2 or dest_pair[0].startswith("["):
             # Probably IPv6, not supported -- raise an error, and hope
             # Happy Eyeballs (RFC6555) makes sure at least the IPv4
             # connection works...
-            raise socket.error("SocksPy doesn't support IPv6")
+            raise socket.error("PySocks doesn't support IPv6")
 
         dest_addr, dest_port = dest_pair
 

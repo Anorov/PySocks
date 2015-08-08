@@ -77,7 +77,7 @@ Example use case with the `sockshandler` urllib2 handler. Note that you must imp
     import socks
     from sockshandler import SocksiPyHandler
 
-    opener = urllib2.build_opener(SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9050))
+    opener = urllib2.build_opener(SocksiPyHandler(socks.SOCKS5, "127.0.0.1", 9050))
     print opener.open("http://www.somesite.com/") # All requests made by the opener will pass through the SOCKS proxy
 
 --------------------------------------------
