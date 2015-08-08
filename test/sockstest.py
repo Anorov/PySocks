@@ -135,38 +135,49 @@ def global_override_SOCKS5_test():
     assert status == 200
     assert socks.get_default_proxy()[1].decode() == default_proxy[1]
 
+def bail_early_with_ipv6_test():
+    sock = socks.socksocket()
+    ipv6_tuple = addr, port, flowinfo, scopeid = "::1", 1234, 0, 0
+    try:
+        sock.connect(ipv6_tuple)
+    except socket.error:
+        return
+    else:
+        assert False, "was expecting"
 
 def main():
     print("Running tests...")
     socket_HTTP_test()
-    print("1/12")
+    print("1/13")
     socket_SOCKS4_test()
-    print("2/12")
+    print("2/13")
     socket_SOCKS5_test()
-    print("3/12")
+    print("3/13")
     if not PY3K:
         urllib2_handler_HTTP_test()
-        print("3.33/12")
+        print("3.33/13")
         urllib2_handler_SOCKS5_test()
-        print("3.66/12")
+        print("3.66/13")
     socket_HTTP_IP_test()
-    print("4/12")
+    print("4/13")
     socket_SOCKS4_IP_test()
-    print("5/12")
+    print("5/13")
     socket_SOCKS5_IP_test()
-    print("6/12")
+    print("6/13")
     SOCKS5_connect_timeout_test()
-    print("7/12")
+    print("7/13")
     SOCKS5_timeout_test()
-    print("8/12")
+    print("8/13")
     urllib2_HTTP_test()
-    print("9/12")
+    print("9/13")
     urllib2_SOCKS5_test()
-    print("10/12")
+    print("10/13")
     global_override_HTTP_test()
-    print("11/12")
+    print("11/13")
     global_override_SOCKS5_test()
-    print("12/12")
+    print("12/13")
+    bail_early_with_ipv6_test()
+    print("13/13")
     print("All tests ran successfully")
 
 
