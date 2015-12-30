@@ -162,20 +162,48 @@ def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
     source_address - tuple (host, port) for the socket to bind to as its source
     address before connecting (only for compatibility)
     """
-    sock = socksocket()
-    if socket_options is not None:
-        for opt in socket_options:
-            sock.setsockopt(*opt)
-    if isinstance(timeout, (int, float)):
-        sock.settimeout(timeout)
-    if proxy_type is not None:
-        sock.set_proxy(proxy_type, proxy_addr, proxy_port, proxy_rdns,
-                       proxy_username, proxy_password)
-    if source_address is not None:
-        sock.bind(source_address)
+    # Remove IPv6 brackets on the remote address and proxy address.
+    remote_host, remote_port = dest_pair
+    if remote_host.startswith('['):
+        remote_host = remote_host.strip('[]')
+    if proxy_addr and proxy_addr.startswith('['):
+        proxy_addr = proxy_addr.strip('[]')
 
-    sock.connect(dest_pair)
-    return sock
+    err = None
+
+    # Allow the SOCKS proxy to be on IPv4 or IPv6 addresses.
+    for r in socket.getaddrinfo(proxy_addr, proxy_port, 0, socket.SOCK_STREAM):
+        family, socket_type, proto, canonname, sa = r
+        sock = None
+        try:
+            sock = socksocket(family, socket_type, proto)
+
+            if socket_options is not None:
+                for opt in socket_options:
+                    sock.setsockopt(*opt)
+
+            if isinstance(timeout, (int, float)):
+                sock.settimeout(timeout)
+
+            if proxy_type is not None:
+                sock.set_proxy(proxy_type, proxy_addr, proxy_port, proxy_rdns,
+                               proxy_username, proxy_password)
+            if source_address is not None:
+                sock.bind(source_address)
+
+            sock.connect((remote_host, remote_port))
+            return sock
+
+        except socket.error as e:
+            err = e
+            if sock is not None:
+                sock.close()
+                sock = None
+
+    if err is not None:
+        raise err
+
+    raise socket.error("gai returned empty list.")
 
 class _BaseSocket(socket.socket):
     """Allows Python 2's "delegated" methods such as send() to be overridden
