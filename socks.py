@@ -506,27 +506,40 @@ class socksocket(_BaseSocket):
         """
         host, port = addr
         proxy_type, _, _, rdns, username, password = self.proxy
+        family_to_byte = {socket.AF_INET: b"\x01", socket.AF_INET6: b"\x04"}
 
         # If the given destination address is an IP address, we'll
-        # use the IPv4 address request even if remote resolving was specified.
-        try:
-            addr_bytes = socket.inet_aton(host)
-            file.write(b"\x01" + addr_bytes)
-            host = socket.inet_ntoa(addr_bytes)
-        except socket.error:
-            # Well it's not an IP number, so it's probably a DNS name.
-            if rdns:
-                # Resolve remotely
-                host_bytes = host.encode('idna')
-                file.write(b"\x03" + chr(len(host_bytes)).encode() + host_bytes)
-            else:
-                # Resolve locally
-                addr_bytes = socket.inet_aton(socket.gethostbyname(host))
-                file.write(b"\x01" + addr_bytes)
-                host = socket.inet_ntoa(addr_bytes)
+        # use the IP address request even if remote resolving was specified.
+        # Detect whether the address is IPv4/6 directly.
+        for family in (socket.AF_INET, socket.AF_INET6):
+            try:
+                addr_bytes = socket.inet_pton(family, host)
+                file.write(family_to_byte[family] + addr_bytes)
+                host = socket.inet_ntop(family, addr_bytes)
+                file.write(struct.pack(">H", port))
+                return host, port
+            except socket.error:
+                continue
 
-        file.write(struct.pack(">H", port))
-        return host, port
+        # Well it's not an IP number, so it's probably a DNS name.
+        if rdns:
+            # Resolve remotely
+            host_bytes = host.encode('idna')
+            file.write(b"\x03" + chr(len(host_bytes)).encode() + host_bytes)
+        else:
+            # Resolve locally
+            addresses = socket.getaddrinfo(host, port)
+            # We can't really work out what IP is reachable, so just pick the
+            # first.
+            target_addr = addresses[0]
+            family = target_addr[0]
+            host = target_addr[4][0]
+
+            addr_bytes = socket.inet_pton(family, host)
+            file.write(family_to_byte[family] + addr_bytes)
+            host = socket.inet_ntop(family, addr_bytes)
+            file.write(struct.pack(">H", port))
+            return host, port
 
     def _read_SOCKS5_address(self, file):
         atyp = self._readall(file, 1)
@@ -535,6 +548,8 @@ class socksocket(_BaseSocket):
         elif atyp == b"\x03":
             length = self._readall(file, 1)
             addr = self._readall(file, ord(length))
+        elif atyp == b"\x04":
+            addr = socket.inet_ntop(socket.AF_INET6, self._readall(file, 16))
         else:
             raise GeneralProxyError("SOCKS5 proxy server sent invalid data")
 
