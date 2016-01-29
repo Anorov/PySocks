@@ -60,6 +60,7 @@ from errno import EOPNOTSUPP, EINVAL, EAGAIN
 from io import BytesIO
 from os import SEEK_CUR
 from collections import Callable
+from base64 import b64encode
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
 PROXY_TYPE_SOCKS5 = SOCKS5 = 2
@@ -625,8 +626,17 @@ class socksocket(_BaseSocket):
         # If we need to resolve locally, we do this now
         addr = dest_addr if rdns else socket.gethostbyname(dest_addr)
 
-        self.sendall(b"CONNECT " + addr.encode('idna') + b":" + str(dest_port).encode() +
-                     b" HTTP/1.1\r\n" + b"Host: " + dest_addr.encode('idna') + b"\r\n\r\n")
+        http_headers = [
+            b"Connect %s:%s HTTP/1.1" % (addr.encode('idna'), str(dest_port).encode()),
+            b"Host: %s" % dest_addr.encode('idna')
+        ]
+
+        if username and password:
+            http_headers.append(b"Proxy-Authorization: basic %s" % str(b64encode("%s:%s" % (username, password))))
+
+        http_headers.append(b"\r\n")
+
+        self.sendall(b"\r\n".join(http_headers))
 
         # We just need the first line to check if the connection was successful
         fobj = self.makefile()
