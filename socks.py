@@ -627,12 +627,12 @@ class socksocket(_BaseSocket):
         addr = dest_addr if rdns else socket.gethostbyname(dest_addr)
 
         http_headers = [
-            b"Connect %s:%s HTTP/1.1" % (addr.encode('idna'), str(dest_port).encode()),
-            b"Host: %s" % dest_addr.encode('idna')
+            b"Connect " + addr.encode('idna') + b":" + str(dest_port).encode() + b" HTTP/1.1",
+            b"Host: " + dest_addr.encode('idna')
         ]
 
         if username and password:
-            http_headers.append(b"Proxy-Authorization: basic %s" % str(b64encode("%s:%s" % (username, password))))
+            http_headers.append(b"Proxy-Authorization: basic " + b64encode(username + b":" + password))
 
         http_headers.append(b"\r\n")
 
