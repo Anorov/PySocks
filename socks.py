@@ -627,7 +627,7 @@ class socksocket(_BaseSocket):
         addr = dest_addr if rdns else socket.gethostbyname(dest_addr)
 
         http_headers = [
-            b"Connect " + addr.encode('idna') + b":" + str(dest_port).encode() + b" HTTP/1.1",
+            b"CONNECT " + addr.encode('idna') + b":" + str(dest_port).encode() + b" HTTP/1.1",
             b"Host: " + dest_addr.encode('idna')
         ]
 
