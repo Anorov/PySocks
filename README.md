@@ -276,6 +276,7 @@ class `HTTPError` - This will be raised for HTTP errors. The message will contai
 the HTTP status code and provided error message.
 
 After establishing the connection, the object behaves like a standard socket.
+
 Methods like `makefile()` and `settimeout()` should behave just like regular sockets.
 Call the `close()` method to close the connection.
 
