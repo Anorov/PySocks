@@ -1,7 +1,7 @@
 PySocks
 =======
 
-Updated and actively maintained version of [SocksiPy](http://socksipy.sourceforge.net/), with bug fixes and extra features.
+Updated and semi-actively maintained version of [SocksiPy](http://socksipy.sourceforge.net/), with bug fixes and extra features.
 
 Acts as a drop-in replacement to the socket module.
 
