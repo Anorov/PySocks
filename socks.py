@@ -258,8 +258,6 @@ class socksocket(_BaseSocket):
         self.proxy_sockname = None
         self.proxy_peername = None
 
-        self.timeout = None
-
     def _readall(self, file, count):
         """
         Receive EXACTLY the number of bytes requested from the file object.
@@ -272,24 +270,6 @@ class socksocket(_BaseSocket):
                 raise GeneralProxyError("Connection closed unexpectedly")
             data += d
         return data
-
-    def settimeout(self, timeout):
-        self.timeout = timeout
-        try:
-            # test if we're connected, if so apply timeout
-            peer = self.get_proxy_peername()
-            _BaseSocket.settimeout(self, self.timeout)
-        except socket.error:
-            pass
-
-    def gettimeout(self):
-        return self.timeout
-
-    def setblocking(self, v):
-        if v:
-            self.settimeout(None)
-        else:
-            self.settimeout(0.0)
 
     def set_proxy(self, proxy_type=None, addr=None, port=None, rdns=True, username=None, password=None):
         """set_proxy(proxy_type, addr[, port[, rdns[, username[, password]]]])
@@ -349,7 +329,6 @@ class socksocket(_BaseSocket):
         host, _ = proxy
         _, port = relay
         _BaseSocket.connect(self, (host, port))
-        _BaseSocket.settimeout(self, self.timeout)
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
 
     def sendto(self, bytes, *args, **kwargs):
@@ -516,8 +495,6 @@ class socksocket(_BaseSocket):
 
             # Get the bound address/port
             bnd = self._read_SOCKS5_address(reader)
-
-            _BaseSocket.settimeout(self, self.timeout)
             return (resolved, bnd)
         finally:
             reader.close()
@@ -768,7 +745,6 @@ class socksocket(_BaseSocket):
                 # Calls negotiate_{SOCKS4, SOCKS5, HTTP}
                 negotiate = self._proxy_negotiators[proxy_type]
                 negotiate(self, dest_addr, dest_port)
-                _BaseSocket.settimeout(self, self.timeout)
             except socket.error as error:
                 # Wrap socket errors
                 self.close()
