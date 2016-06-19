@@ -179,29 +179,29 @@ def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
         try:
             sock = socksocket(family, socket_type, proto)
 
-            if socket_options is not None:
+            if socket_options:
                 for opt in socket_options:
                     sock.setsockopt(*opt)
 
             if isinstance(timeout, (int, float)):
                 sock.settimeout(timeout)
 
-            if proxy_type is not None:
+            if proxy_type:
                 sock.set_proxy(proxy_type, proxy_addr, proxy_port, proxy_rdns,
                                proxy_username, proxy_password)
-            if source_address is not None:
+            if source_address:
                 sock.bind(source_address)
 
             sock.connect((remote_host, remote_port))
             return sock
 
-        except socket.error as e:
+        except (socket.error, ProxyConnectionError) as e:
             err = e
-            if sock is not None:
+            if sock:
                 sock.close()
                 sock = None
 
-    if err is not None:
+    if err:
         raise err
 
     raise socket.error("gai returned empty list.")
