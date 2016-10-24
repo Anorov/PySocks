@@ -59,8 +59,20 @@ import struct
 from errno import EOPNOTSUPP, EINVAL, EAGAIN
 from io import BytesIO
 from os import SEEK_CUR
+import os
 from collections import Callable
 from base64 import b64encode
+
+
+if os.name == 'nt':
+    try:
+        import win_inet_pton
+        import socket
+    except ImportError:
+        raise ImportError('To run PySocks under windows you need to install win_inet_pton') 
+else:
+    import socket
+
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
 PROXY_TYPE_SOCKS5 = SOCKS5 = 2
