@@ -10,5 +10,5 @@ def run_proxy():
         reactor.stop()
 
 if __name__ == "__main__":
-    print "Running SOCKS4 proxy server"
+    print("Running SOCKS4 proxy server")
     run_proxy()
