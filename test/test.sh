@@ -5,7 +5,7 @@ type python2 >/dev/null 2>&1 || alias python2='python'
 echo "Starting proxy servers..."
 python2 socks4server.py > /dev/null &
 python2 httpproxy.py > /dev/null &
-./mocks start
+echo "Ensure a SOCKS5 server is listening"
 
 sleep 2
 echo "Python 2.6 tests"
