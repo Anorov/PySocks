@@ -69,7 +69,7 @@ if os.name == 'nt':
         import win_inet_pton
         import socket
     except ImportError:
-        raise ImportError('To run PySocks under windows you need to install win_inet_pton') 
+        raise ImportError('To run PySocks under windows you need to install win_inet_pton')
 else:
     import socket
 
@@ -374,8 +374,8 @@ class socksocket(_BaseSocket):
         if not self._proxyconn:
             self.bind(("", 0))
 
-        buf = BytesIO(_BaseSocket.recv(self, bufsize, flags))
-        buf.seek(+2, SEEK_CUR)
+        buf = BytesIO(_BaseSocket.recv(self, bufsize + 1024, flags))
+        buf.seek(2, SEEK_CUR)
         frag = buf.read(1)
         if ord(frag):
             raise NotImplementedError("Received UDP packet fragment")
@@ -386,7 +386,7 @@ class socksocket(_BaseSocket):
             if fromhost != peerhost or peerport not in (0, fromport):
                 raise socket.error(EAGAIN, "Packet filtered")
 
-        return (buf.read(), (fromhost, fromport))
+        return (buf.read(bufsize), (fromhost, fromport))
 
     def recv(self, *pos, **kw):
         bytes, _ = self.recvfrom(*pos, **kw)
