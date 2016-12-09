@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from distutils.core import setup
 
-VERSION = "1.6.4"
+VERSION = "1.6.5"
 
 setup(
     name = "PySocks",
