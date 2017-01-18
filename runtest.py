@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import unittest
+import sys
+
 from test.test_pysocks import PySocksTestCase
 
 
