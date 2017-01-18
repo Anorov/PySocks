@@ -178,7 +178,26 @@ class PySocksTestCase(TestCase):
         self.assertProxyResponse(data, content, address)
 
     # 7/13
-    #def test_socks5_connect_timeout(self):
+    def test_socks5_connect_timeout(self):
+        s = socks.socksocket()
+        s.settimeout(0.0001)
+        # The 10.0.0.0 is non-routable IP
+        s.set_proxy(socks.SOCKS5, '10.0.0.0', config.SOCKS5_PROXY_PORT)
+        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        self.assertRaises(socks.ProxyConnectionError, s.connect,
+                          address)
+
+        s = socks.socksocket()
+        s.settimeout(0.0001)
+        # The 10.0.0.0 is non-routable IP
+        s.set_proxy(socks.SOCKS5, '10.0.0.0', config.SOCKS5_PROXY_PORT)
+        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        try:
+            s.connect(address)
+        except socks.ProxyConnectionError as ex:
+            self.assertEqual(str(ex.socket_err), 'timed out')
+        else:
+            assert False
 
     # 8/13
     def test_socks5_read_timeout(self):
@@ -190,11 +209,14 @@ class PySocksTestCase(TestCase):
                           address)
 
         s = socks.socksocket()
+        s.settimeout(0.0001)
         s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
         try:
             s.connect(address)
-        except socks.ProxyConnectionError as ex:
+        except socks.GeneralProxyError as ex:
             self.assertEqual(str(ex.socket_err), 'timed out')
+        else:
+            assert False
 
 
     #def test_urllib2(self):
