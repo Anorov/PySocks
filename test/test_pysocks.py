@@ -177,6 +177,25 @@ class PySocksTestCase(TestCase):
         data = s.recv(2048)
         self.assertProxyResponse(data, content, address)
 
+    # 7/13
+    #def test_socks5_connect_timeout(self):
+
+    # 8/13
+    def test_socks5_read_timeout(self):
+        s = socks.socksocket()
+        s.settimeout(0.0001)
+        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        self.assertRaises(socks.GeneralProxyError, s.connect,
+                          address)
+
+        s = socks.socksocket()
+        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        try:
+            s.connect(address)
+        except socks.ProxyConnectionError as ex:
+            self.assertEqual(str(ex.socket_err), 'timed out')
+
 
     #def test_urllib2(self):
     #    # ?????????????
