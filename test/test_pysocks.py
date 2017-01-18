@@ -180,7 +180,7 @@ class PySocksTestCase(TestCase):
     # 7/13
     def test_socks5_connect_timeout(self):
         s = socks.socksocket()
-        s.settimeout(0.0001)
+        s.settimeout(0.1)
         # The 10.0.0.0 is non-routable IP
         s.set_proxy(socks.SOCKS5, '10.0.0.0', config.SOCKS5_PROXY_PORT)
         address = (config.TEST_HOST, config.TEST_SERVER_PORT)
@@ -188,7 +188,7 @@ class PySocksTestCase(TestCase):
                           address)
 
         s = socks.socksocket()
-        s.settimeout(0.0001)
+        s.settimeout(0.1)
         # The 10.0.0.0 is non-routable IP
         s.set_proxy(socks.SOCKS5, '10.0.0.0', config.SOCKS5_PROXY_PORT)
         address = (config.TEST_HOST, config.TEST_SERVER_PORT)
@@ -200,23 +200,30 @@ class PySocksTestCase(TestCase):
             assert False
 
     # 8/13
-    def test_socks5_read_timeout(self):
-        s = socks.socksocket()
-        s.settimeout(0.0001)
-        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
-        self.assertRaises(socks.GeneralProxyError, s.connect,
-                          address)
+    #def test_socks5_read_timeout(self):
+    #    self.test_server.response['sleep'] = 5
 
-        s = socks.socksocket()
-        s.settimeout(0.0001)
-        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
-        try:
-            s.connect(address)
-        except socks.GeneralProxyError as ex:
-            self.assertEqual(str(ex.socket_err), 'timed out')
-        else:
-            assert False
+    #    s = socks.socksocket()
+    #    s.settimeout(0.1)
+    #    s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+    #    address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+
+    #    def func():
+    #        s.connect(address)
+    #        s.recv(1)
+
+    #    self.assertRaises(socks.GeneralProxyError, func)
+
+    #    s = socks.socksocket()
+    #    s.settimeout(0.1)
+    #    s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+    #    try:
+    #        s.connect(address)
+    #        s.recv(1)
+    #    except socks.GeneralProxyError as ex:
+    #        self.assertEqual(str(ex.socket_err), 'timed out')
+    #    else:
+    #        assert False
 
 
     #def test_urllib2(self):
