@@ -12,72 +12,70 @@ import os
 import signal
 import logging
 from subprocess import Popen
-from multiprocessing import Process
-from threading import Thread, Event
+from threading import Thread
 import threading
 from test_server import TestServer
 import time
+import socket
 
 from test.test_pysocks import PySocksTestCase
 from test import config
 
 
-def socks4_proxy_thread(shutdown_event):
-    cmd = 'python2.7 test/socks4server.py %d' % config.SOCKS4_PROXY_PORT
+def wait_for_socket(server_name, port, timeout=2):
+    ok = False
+    for x in range(10):
+        try:
+            print('Trying %s:%d [%s]' % (config.TEST_HOST, port, server_name))
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((config.TEST_HOST, port))
+            s.close()
+        except socket.error as ex:
+            print('ERROR', ex)
+            time.sleep(timeout/10.0)
+        else:
+            ok = True
+            break
+    if not ok:
+        raise Exception('The %s proxy server has not started in %d seconds'
+                        % (server_name, timeout))
+
+
+def proxy_thread():
+    with open('3proxy.conf', 'w') as out:
+        out.write('\n'.join((
+            'allow *',
+            'auth none',
+            'proxy -a -n -p%d' % config.HTTP_PROXY_PORT,
+            'socks -p%d' % config.SOCKS4_PROXY_PORT,
+            'socks -p%d' % config.SOCKS5_PROXY_PORT,
+        )))
+    cmd = 'test/bin/3proxy 3proxy.conf'
     server = Popen(cmd, shell=True)
     server.wait()
-    if not shutdown_event.is_set():
-        raise Exception('socks4server process has been terminated')
 
 
-def http_proxy_thread(shutdown_event):
-    cmd = 'python2.7 test/httpproxy.py %d' % config.HTTP_PROXY_PORT
-    server = Popen(cmd, shell=True)
-    server.wait()
-    if not shutdown_event.is_set():
-        raise Exception('httpproxy process has been terminated')
-
-
-def socks5_proxy_thread(shutdown_event):
-    client_cmd = 'sslocal -l %d -k bar -m rc4-md5 -s %s -p %d' % (
-        config.SOCKS5_PROXY_PORT,
-        config.TEST_HOST,
-        config.SOCKS5_SHADOWSOCKS_SERVER_PORT,
-    )
-    client = Popen(client_cmd, shell=True)
-    server_cmd = 'ssserver -s %s -k bar -p %d -m rc4-md5 --forbidden-ip ""' % (
-        config.TEST_HOST,
-        config.SOCKS5_SHADOWSOCKS_SERVER_PORT,
-    )
-    server = Popen(server_cmd, shell=True)
-    server.wait()
-    if not shutdown_event.is_set():
-        raise Exception('shadowsocks server process has been terminated')
-
-
-def start_servers(shutdown_event):
-    thread_targets = (
-        http_proxy_thread,
-        socks4_proxy_thread,
-        socks5_proxy_thread,
-    )
-    for target in thread_targets:
-        th = Thread(target=target, args=[shutdown_event])
-        th.daemon = True
-        th.start()
+def start_servers():
+    th = Thread(target=proxy_thread)
+    th.daemon = True
+    th.start()
 
     test_server = TestServer(address=config.TEST_HOST,
                              port=config.TEST_SERVER_PORT)
     test_server.start()
     config.test_server = test_server
 
+    wait_for_socket('3proxy:http', config.HTTP_PROXY_PORT)
+    wait_for_socket('3proxy:socks4', config.SOCKS4_PROXY_PORT)
+    wait_for_socket('3proxy:socks5', config.SOCKS5_PROXY_PORT)
+    wait_for_socket('test-server', config.TEST_SERVER_PORT)
+
 
 def main():
     result = None
     try:
-        shutdown_event = Event()
-        start_servers(shutdown_event) 
-        time.sleep(1) # let CPU to process all this proxy stuff
+        start_servers()
+        #time.sleep(1) # let CPU to process all this proxy stuff
 
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromTestCase(PySocksTestCase)
@@ -85,7 +83,6 @@ def main():
         result = runner.run(suite)
         if config.test_server:
             config.test_server.stop()
-        shutdown_event.set()
     except Exception as ex:
         logging.error('', exc_info=ex)
     finally:
@@ -97,7 +94,7 @@ def main():
         print('Active child processes:')
         for child in parent.children(recursive=True):
             print(' * %s' % child)
-            child.send_signal(signal.SIGTERM)
+            child.send_signal(signal.SIGINT)
 
     if result and result.wasSuccessful():
         sys.exit(0)

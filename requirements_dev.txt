@@ -1,6 +1,3 @@
-twisted
-tornado
 six
 test_server
 psutil
-shadowsocks

@@ -1,24 +1,13 @@
 from unittest import TestCase
-from test_server import TestServer
-#from test import socks4server
-from threading import Thread
-from multiprocessing import Process
 import socks
 import socket
-import time
-from pprint import pprint
 import six
 if six.PY3:
     import urllib.request as urllib2
 else:
     import urllib2
-from subprocess import Popen
-import time
 
 from test import config
-from test.config import (TEST_HOST, TEST_SERVER_PORT, HTTP_PROXY_PORT,
-                         SOCKS4_PROXY_PORT, SOCKS5_PROXY_PORT,
-                         SOCKS5_SHADOWSOCKS_SERVER_PORT)
 
 
 class PySocksTestCase(TestCase):
@@ -43,12 +32,12 @@ class PySocksTestCase(TestCase):
     def test_stdlib_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.test_server.address, self.test_server.port))
-        s.sendall(self.build_http_request(TEST_HOST))
+        s.sendall(self.build_http_request(config.TEST_HOST))
         status = s.recv(2048).splitlines()[0]
         self.assertEqual(b'HTTP/1.1 200 OK', status)
         self.assertEqual('PySocksTester',
                          self.test_server.request['headers']['user-agent'])
-        self.assertEqual(TEST_HOST,
+        self.assertEqual(config.TEST_HOST,
                          self.test_server.request['headers']['host'])
 
 
@@ -56,16 +45,16 @@ class PySocksTestCase(TestCase):
     def test_http_proxy(self):
         self.test_server.response['data'] = b'zzz'
         s = socks.socksocket()
-        s.set_proxy(socks.HTTP, TEST_HOST, HTTP_PROXY_PORT)
+        s.set_proxy(socks.HTTP, config.TEST_HOST, config.HTTP_PROXY_PORT)
         s.connect((self.test_server.address, self.test_server.port))
-        s.sendall(self.build_http_request(TEST_HOST))
+        s.sendall(self.build_http_request(config.TEST_HOST))
         data = s.recv(2048)
         status = data.splitlines()[0]
         body = data.split(b'\r\n\r\n')[1]
         self.assertEqual(b'HTTP/1.1 200 OK', status)
         self.assertEqual('PySocksTester',
                          self.test_server.request['headers']['user-agent'])
-        self.assertEqual(TEST_HOST,
+        self.assertEqual(config.TEST_HOST,
                          self.test_server.request['headers']['host'])
         self.assertEqual(b'zzz', body)
 
@@ -73,28 +62,28 @@ class PySocksTestCase(TestCase):
     # 2/13
     def test_socks4_proxy(self):
         s = socks.socksocket()
-        s.set_proxy(socks.SOCKS4, TEST_HOST, SOCKS4_PROXY_PORT)
+        s.set_proxy(socks.SOCKS4, config.TEST_HOST, config.SOCKS4_PROXY_PORT)
         s.connect((self.test_server.address, self.test_server.port))
-        s.sendall(self.build_http_request(TEST_HOST))
+        s.sendall(self.build_http_request(config.TEST_HOST))
         status = s.recv(2048).splitlines()[0]
         self.assertEqual(b'HTTP/1.1 200 OK', status)
         self.assertEqual('PySocksTester',
                          self.test_server.request['headers']['user-agent'])
-        self.assertEqual(TEST_HOST,
+        self.assertEqual(config.TEST_HOST,
                          self.test_server.request['headers']['host'])
 
 
     # 3/13
     def test_socks5_proxy(self):
         s = socks.socksocket()
-        s.set_proxy(socks.SOCKS5, TEST_HOST, SOCKS5_PROXY_PORT)
+        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
         s.connect((self.test_server.address, self.test_server.port))
-        s.sendall(self.build_http_request(TEST_HOST))
+        s.sendall(self.build_http_request(config.TEST_HOST))
         status = s.recv(2048).splitlines()[0]
         self.assertEqual(b'HTTP/1.1 200 OK', status)
         self.assertEqual('PySocksTester',
                          self.test_server.request['headers']['user-agent'])
-        self.assertEqual(TEST_HOST,
+        self.assertEqual(config.TEST_HOST,
                          self.test_server.request['headers']['host'])
 
 
