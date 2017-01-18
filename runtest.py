@@ -26,7 +26,8 @@ def wait_for_socket(server_name, port, timeout=2):
     ok = False
     for x in range(10):
         try:
-            print('Trying %s:%d [%s]' % (config.TEST_HOST, port, server_name))
+            print('Testing [%s] proxy server on %s:%d'
+                  % (server_name, config.TEST_HOST, port))
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((config.TEST_HOST, port))
             s.close()
@@ -34,6 +35,7 @@ def wait_for_socket(server_name, port, timeout=2):
             print('ERROR', ex)
             time.sleep(timeout/10.0)
         else:
+            print('Connection established')
             ok = True
             break
     if not ok:
