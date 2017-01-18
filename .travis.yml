@@ -1,14 +1,14 @@
 language: python
 
-python: 2.7
+python: 3.5
 
 os:
   - linux
 
 env:
   - TOX_ENV=py27
-  - TOX_ENV=py33
-  - TOX_ENV=py34
+  #- TOX_ENV=py33
+  #- TOX_ENV=py34
 
 matrix:
   include:
@@ -21,7 +21,7 @@ install:
   # install development dependencies into python2.7 regardless
   # of tox python version because socks4 twisted proxy server
   # always runs on python2.7
-  - deactivate; python2.7 -m pip install --user -r requirements_dev.txt
+  - python2.7 -m pip install --user -r requirements_dev.txt
   - pip install tox
 
 script:
