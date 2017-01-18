@@ -1,0 +1,19 @@
+language: python
+
+python: 3.6
+
+os:
+  - linux
+
+env:
+  - TOX_ENV=py27
+  - TOX_ENV=py33
+  - TOX_ENV=py34
+  - TOX_ENV=py35
+  - TOX_ENV=py36
+
+install:
+  - pip install tox
+
+script:
+    - tox -e $TOX_ENV
