@@ -1,6 +1,6 @@
 from unittest import TestCase
 from test_server import TestServer
-from test import socks4server
+#from test import socks4server
 from threading import Thread
 from multiprocessing import Process
 import socks
@@ -26,7 +26,13 @@ SOCKS5_PROXY_PORT = 7774
 SOCKS5_SHADOWSOCKS_SERVER_PORT = 7773
 
 def socks4_proxy_thread():
-    socks4server.run_proxy(port=SOCKS4_PROXY_PORT)
+    #socks4server.run_proxy(port=SOCKS4_PROXY_PORT)
+    cmd = 'python2.7 test/socks4server.py %d' % SOCKS4_PROXY_PORT
+    server = Popen(cmd, shell=True)
+    while True:
+        res = server.poll()
+        if res is not None:
+            raise Exception('socks4server process has been terminated')
 
 
 def http_proxy_thread():
