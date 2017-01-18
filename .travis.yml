@@ -17,13 +17,11 @@ matrix:
     - python: 3.6
       env: TOX_ENV=py36
 
-sudo: yes
-
 install:
   # install development dependencies into python2.7 regardless
   # of tox python version because socks4 twisted proxy server
   # always runs on python2.7
-  - sudo python2.7 -m pip install -r requirements_dev.txt
+  - python2.7 -m pip install --user -r requirements_dev.txt
   - pip install tox
 
 script:
