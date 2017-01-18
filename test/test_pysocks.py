@@ -3,9 +3,6 @@ from test_server import TestServer
 from test import socks4server
 from threading import Thread
 from multiprocessing import Process
-import threading
-import psutil
-import os
 import socks
 import socket
 import time
@@ -15,16 +12,21 @@ if six.PY3:
     import urllib.request as urllib2
 else:
     import urllib2
+from subprocess import Popen
+import time
 
 TEST_SERVER_HOST = '127.0.0.1'
 TEST_SERVER_PORT = 7777
-SOCKS_PROXY_HOST = '127.0.0.1'
-SOCKS_PROXY_PORT = 7778
 HTTP_PROXY_HOST = '127.0.0.1'
-HTTP_PROXY_PORT = 7779
+HTTP_PROXY_PORT = 7776
+SOCKS4_PROXY_HOST = '127.0.0.1'
+SOCKS4_PROXY_PORT = 7775
+SOCKS5_PROXY_HOST = '127.0.0.1'
+SOCKS5_PROXY_PORT = 7774
+SOCKS5_SHADOWSOCKS_SERVER_PORT = 7773
 
-def socks_proxy_thread():
-    socks4server.run_proxy(port=SOCKS_PROXY_PORT)
+def socks4_proxy_thread():
+    socks4server.run_proxy(port=SOCKS4_PROXY_PORT)
 
 
 def http_proxy_thread():
@@ -32,17 +34,49 @@ def http_proxy_thread():
     httpproxy.run_proxy(port=HTTP_PROXY_PORT)
 
 
+def socks5_proxy_thread():
+    client_cmd = 'sslocal -l %d -k bar -m rc4-md5 -s %s -p %d' % (
+        SOCKS5_PROXY_PORT,
+        SOCKS5_PROXY_HOST,
+        SOCKS5_SHADOWSOCKS_SERVER_PORT,
+    )
+    client = Popen(client_cmd, shell=True)
+    server_cmd = 'ssserver -s %s -k bar -p %d -m rc4-md5 --forbidden-ip ""' % (
+        SOCKS5_PROXY_HOST,
+        SOCKS5_SHADOWSOCKS_SERVER_PORT,
+    )
+    server = Popen(server_cmd, shell=True)
+    while True:
+        res = client.poll()
+        if res is not None:
+            raise Exception('Shadowsocks client has been terminated')
+
+        res = server.poll()
+        if res is not None:
+            raise Exception('Shadowsocks server has been terminated')
+        time.sleep(0.5)
+
+
+
+
 class PySocksTestCase(TestCase):
+    # TODO: move starting/stopping servers outsid TestCase
+    # into runtest.py
     @classmethod
     def setUpClass(cls):
         try:
-            cls.socks_proxy = Process(target=socks_proxy_thread)
-            cls.socks_proxy.daemon = True
-            cls.socks_proxy.start()
-
             cls.http_proxy = Process(target=http_proxy_thread)
             cls.http_proxy.daemon = True
             cls.http_proxy.start()
+
+            cls.socks4_proxy = Process(target=socks4_proxy_thread)
+            cls.socks4_proxy.daemon = True
+            cls.socks4_proxy.start()
+
+            cls.socks5_proxy = Process(target=socks5_proxy_thread)
+            cls.socks5_proxy.daemon = True
+            cls.socks5_proxy.start()
+
         except Exception as ex:
             #cls.test_server.stop()
             raise
@@ -59,32 +93,25 @@ class PySocksTestCase(TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.test_server.stop()
-        print('Active threads:')
-        for th in threading.enumerate():
-            print(' * %s' % th)
-
-        parent = psutil.Process(os.getpid())
-        print('Active child processes:')
-        for child in parent.children(recursive=True):
-            print(' * %s' % child)
 
 
     def test_foo(self):
         self.assertEqual('foo', 'fo' + 'o')
 
-    def raw_http_request(self):
+    def raw_http_request(self, host):
         return (
-            'GET /ip HTTP/1.1\r\n'
+            'GET / HTTP/1.1\r\n'
             'Host: %s\r\n'
             'User-Agent: PySocksTester\r\n'
             'Accept: text/html\r\n'
-            '\r\n' % TEST_SERVER_HOST
+            '\r\n' % host
         ).encode()
 
+    # 0/13
     def test_stdlib_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((self.test_server.address, self.test_server.port))
-        s.sendall(self.raw_http_request())
+        s.sendall(self.raw_http_request(TEST_SERVER_HOST))
         status = s.recv(2048).splitlines()[0]
         self.assertEqual(b'HTTP/1.1 200 OK', status)
         self.assertEqual('PySocksTester',
@@ -92,23 +119,31 @@ class PySocksTestCase(TestCase):
         self.assertEqual(TEST_SERVER_HOST,
                          self.test_server.request['headers']['host'])
 
-    def test_socks4_proxy(self):
-        s = socks.socksocket()
-        s.set_proxy(socks.SOCKS4, SOCKS_PROXY_HOST, SOCKS_PROXY_PORT)
-        s.connect((self.test_server.address, self.test_server.port))
-        s.sendall(self.raw_http_request())
-        status = s.recv(2048).splitlines()[0]
-        self.assertEqual(b'HTTP/1.1 200 OK', status)
-        self.assertEqual('PySocksTester',
-                         self.test_server.request['headers']['user-agent'])
-        self.assertEqual(TEST_SERVER_HOST,
-                         self.test_server.request['headers']['host'])
 
+    # 1/13
     def test_http_proxy(self):
+        self.test_server.response['data'] = b'zzz'
         s = socks.socksocket()
         s.set_proxy(socks.HTTP, HTTP_PROXY_HOST, HTTP_PROXY_PORT)
         s.connect((self.test_server.address, self.test_server.port))
-        s.sendall(self.raw_http_request())
+        s.sendall(self.raw_http_request(TEST_SERVER_HOST))
+        data = s.recv(2048)
+        status = data.splitlines()[0]
+        body = data.split(b'\r\n\r\n')[1]
+        self.assertEqual(b'HTTP/1.1 200 OK', status)
+        self.assertEqual('PySocksTester',
+                         self.test_server.request['headers']['user-agent'])
+        self.assertEqual(TEST_SERVER_HOST,
+                         self.test_server.request['headers']['host'])
+        self.assertEqual(b'zzz', body)
+
+
+    # 2/13
+    def test_socks4_proxy(self):
+        s = socks.socksocket()
+        s.set_proxy(socks.SOCKS4, SOCKS4_PROXY_HOST, SOCKS4_PROXY_PORT)
+        s.connect((self.test_server.address, self.test_server.port))
+        s.sendall(self.raw_http_request(TEST_SERVER_HOST))
         status = s.recv(2048).splitlines()[0]
         self.assertEqual(b'HTTP/1.1 200 OK', status)
         self.assertEqual('PySocksTester',
@@ -116,7 +151,23 @@ class PySocksTestCase(TestCase):
         self.assertEqual(TEST_SERVER_HOST,
                          self.test_server.request['headers']['host'])
 
+
+    # 3/13
+    def test_socks5_proxy(self):
+        s = socks.socksocket()
+        s.set_proxy(socks.SOCKS5, SOCKS5_PROXY_HOST, SOCKS5_PROXY_PORT)
+        s.connect((self.test_server.address, self.test_server.port))
+        s.sendall(self.raw_http_request(TEST_SERVER_HOST))
+        status = s.recv(2048).splitlines()[0]
+        self.assertEqual(b'HTTP/1.1 200 OK', status)
+        self.assertEqual('PySocksTester',
+                         self.test_server.request['headers']['user-agent'])
+        self.assertEqual(TEST_SERVER_HOST,
+                         self.test_server.request['headers']['host'])
+
+
     #def test_urllib2(self):
+    #    # ?????????????
     #    # HTTPError: 405: Method Not Allowed
     #    # [*] Note: The HTTP proxy server may not be supported by PySocks
     #    # (must be a CONNECT tunnel proxy)
