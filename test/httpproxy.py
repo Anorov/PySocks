@@ -120,13 +120,16 @@ def run_proxy(port=8080, start_ioloop=True):
     Run proxy on the specified port. If start_ioloop is True (default),
     the tornado IOLoop will be started immediately.
     """
+    print ("Running HTTP proxy server on port %s" % port)
     app = tornado.web.Application([
         (r'.*', ProxyHandler),
     ])
     app.listen(port, address="127.0.0.1")
     ioloop = tornado.ioloop.IOLoop.instance()
-    if start_ioloop:
-        ioloop.start()
+    ioloop.start()
+    #if start_ioloop:
+    #    ioloop.start()
+
 
 if __name__ == '__main__':
     port = 8081

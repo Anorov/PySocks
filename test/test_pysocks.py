@@ -9,35 +9,56 @@ import os
 import socks
 import socket
 import time
+from pprint import pprint
+import six
+if six.PY3:
+    import urllib.request as urllib2
+else:
+    import urllib2
 
+TEST_SERVER_HOST = '127.0.0.1'
 TEST_SERVER_PORT = 7777
-SOCKS_PROXY_ADDRESS = '127.0.0.1'
+SOCKS_PROXY_HOST = '127.0.0.1'
 SOCKS_PROXY_PORT = 7778
+HTTP_PROXY_HOST = '127.0.0.1'
+HTTP_PROXY_PORT = 7779
 
 def socks_proxy_thread():
     socks4server.run_proxy(port=SOCKS_PROXY_PORT)
 
 
+def http_proxy_thread():
+    from test import httpproxy
+    httpproxy.run_proxy(port=HTTP_PROXY_PORT)
+
+
 class PySocksTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.server = TestServer(address='localhost', port=TEST_SERVER_PORT)
-        cls.server.start()
         try:
             cls.socks_proxy = Process(target=socks_proxy_thread)
             cls.socks_proxy.daemon = True
             cls.socks_proxy.start()
+
+            cls.http_proxy = Process(target=http_proxy_thread)
+            cls.http_proxy.daemon = True
+            cls.http_proxy.start()
         except Exception as ex:
-            cls.server.stop()
+            #cls.test_server.stop()
             raise
+        # Starting test_server later than http proxy server
+        # because of "RuntimeError: IOLoop is already running" error
+        cls.test_server = TestServer(address=TEST_SERVER_HOST,
+                                     port=TEST_SERVER_PORT)
+        cls.test_server.start()
         time.sleep(1)
 
     def setUp(self):
-        self.server.reset()
+        self.test_server.reset()
 
     @classmethod
     def tearDownClass(cls):
-        cls.server.stop()
+        cls.test_server.stop()
         print('Active threads:')
         for th in threading.enumerate():
             print(' * %s' % th)
@@ -54,26 +75,56 @@ class PySocksTestCase(TestCase):
     def raw_http_request(self):
         return (
             'GET /ip HTTP/1.1\r\n'
-            'Host: ifconfig.me\r\n'
-            'User-Agent: Mozilla\r\n'
+            'Host: %s\r\n'
+            'User-Agent: PySocksTester\r\n'
             'Accept: text/html\r\n'
-            '\r\n'
+            '\r\n' % TEST_SERVER_HOST
         ).encode()
 
     def test_stdlib_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self.server.address, self.server.port))
+        s.connect((self.test_server.address, self.test_server.port))
         s.sendall(self.raw_http_request())
         status = s.recv(2048).splitlines()[0]
         self.assertEqual(b'HTTP/1.1 200 OK', status)
+        self.assertEqual('PySocksTester',
+                         self.test_server.request['headers']['user-agent'])
+        self.assertEqual(TEST_SERVER_HOST,
+                         self.test_server.request['headers']['host'])
 
-    #def test_socks5_proxy(self):
-    #    s = socks.socksocket()
-    #    s.set_proxy(socks.SOCKS5, SOCKS_PROXY_ADDRESS, SOCKS_PROXY_PORT)
-    #    s.connect((self.server.address, self.server.port))
-    #    s.sendall(self.raw_http_request())
-    #    status = s.recv(2048).splitlines()[0]
-    #    assert status.startswith(b"HTTP/1.1 200")
+    def test_socks4_proxy(self):
+        s = socks.socksocket()
+        s.set_proxy(socks.SOCKS4, SOCKS_PROXY_HOST, SOCKS_PROXY_PORT)
+        s.connect((self.test_server.address, self.test_server.port))
+        s.sendall(self.raw_http_request())
+        status = s.recv(2048).splitlines()[0]
+        self.assertEqual(b'HTTP/1.1 200 OK', status)
+        self.assertEqual('PySocksTester',
+                         self.test_server.request['headers']['user-agent'])
+        self.assertEqual(TEST_SERVER_HOST,
+                         self.test_server.request['headers']['host'])
+
+    def test_http_proxy(self):
+        s = socks.socksocket()
+        s.set_proxy(socks.HTTP, HTTP_PROXY_HOST, HTTP_PROXY_PORT)
+        s.connect((self.test_server.address, self.test_server.port))
+        s.sendall(self.raw_http_request())
+        status = s.recv(2048).splitlines()[0]
+        self.assertEqual(b'HTTP/1.1 200 OK', status)
+        self.assertEqual('PySocksTester',
+                         self.test_server.request['headers']['user-agent'])
+        self.assertEqual(TEST_SERVER_HOST,
+                         self.test_server.request['headers']['host'])
+
+    #def test_urllib2(self):
+    #    # HTTPError: 405: Method Not Allowed
+    #    # [*] Note: The HTTP proxy server may not be supported by PySocks
+    #    # (must be a CONNECT tunnel proxy)
+    #    socks.set_default_proxy(socks.HTTP, TEST_SERVER_HOST, TEST_SERVER_PORT)
+    #    socks.wrap_module(urllib2)
+    #    res = urllib2.urlopen(self.test_server.get_url())
+    #    self.assertEqual(200, res.getcode())
+
 
 #import sys
 #sys.path.append("..")
@@ -88,39 +139,7 @@ class PySocksTestCase(TestCase):
 #    import sockshandler
 #    import urllib2
 #
-#def raw_HTTP_request():
-#    req = "GET /ip HTTP/1.1\r\n"
-#    req += "Host: ifconfig.me\r\n"
-#    req += "User-Agent: Mozilla\r\n"
-#    req += "Accept: text/html\r\n"
-#    req += "\r\n"
-#    return req.encode()
-#
-    #def test_http_proxy(self):
-    #    s = socks.socksocket()
-    #    s.set_proxy(socks.HTTP, HTTP_PROXY_ADDRESS, HTTP_PROXY_PORT)
-    #    s.connect(("ifconfig.me", 80))
-    #    s.sendall(raw_HTTP_request())
-    #    status = s.recv(2048).splitlines()[0]
-    #    assert status.startswith(b"HTTP/1.1 200")
 
-#def socket_HTTP_test():
-#    s = socks.socksocket()
-#    s.set_proxy(socks.HTTP, "127.0.0.1", 8081)
-#    s.connect(("ifconfig.me", 80))
-#    s.sendall(raw_HTTP_request())
-#    status = s.recv(2048).splitlines()[0]
-#    assert status.startswith(b"HTTP/1.1 200")
-#
-#def socket_SOCKS4_test():
-#    s = socks.socksocket()
-#    s.set_proxy(socks.SOCKS4, "127.0.0.1", 1080)
-#    s.connect(("ifconfig.me", 80))
-#    s.sendall(raw_HTTP_request())
-#    status = s.recv(2048).splitlines()[0]
-#    assert status.startswith(b"HTTP/1.1 200")
-#
-#
 #def SOCKS5_connect_timeout_test():
 #    s = socks.socksocket()
 #    s.settimeout(0.0001)
@@ -173,12 +192,6 @@ class PySocksTestCase(TestCase):
 #    status = s.recv(2048).splitlines()[0]
 #    assert status.startswith(b"HTTP/1.1 200")
 #
-#def urllib2_HTTP_test():
-#    socks.set_default_proxy(socks.HTTP, "127.0.0.1", 8081)
-#    socks.wrap_module(urllib2)
-#    status = urllib2.urlopen("http://ifconfig.me/ip").getcode()
-#    assert status == 200
-#
 #def urllib2_SOCKS5_test():
 #    socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 1081)
 #    socks.wrap_module(urllib2)
@@ -186,11 +199,13 @@ class PySocksTestCase(TestCase):
 #    assert status == 200
 #
 #def urllib2_handler_HTTP_test():
+#    import sockshandler
 #    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.HTTP, "127.0.0.1", 8081))
 #    status = opener.open("http://ifconfig.me/ip").getcode()
 #    assert status == 200
 #
 #def urllib2_handler_SOCKS5_test():
+#    import sockshandler
 #    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.SOCKS5, "127.0.0.1", 1081))
 #    status = opener.open("http://ifconfig.me/ip").getcode()
 #    assert status == 200
