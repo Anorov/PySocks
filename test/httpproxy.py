@@ -132,9 +132,9 @@ def run_proxy(port=8080, start_ioloop=True):
 
 
 if __name__ == '__main__':
-    port = 8081
-    if len(sys.argv) > 1:
+    try:
         port = int(sys.argv[1])
-
-    print ("Running HTTP proxy server")
-    run_proxy(port)
+    except IndexError, ValueError:
+        print('Usage: socks4server <port>')
+    else:
+        run_proxy(port)
