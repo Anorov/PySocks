@@ -7,7 +7,11 @@ def main():
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromTestCase(PySocksTestCase)
     runner = unittest.TextTestRunner()
-    runner.run(suite)
+    result = runner.run(suite)
+    if result.wasSuccessful():
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 
 if __name__ == '__main__':
