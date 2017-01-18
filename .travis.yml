@@ -1,5 +1,8 @@
 language: python
 
+# Base python version should not be 2.7
+# to be able to run command:
+# python2.7 -m pip install --user -r requirements_dev.txt
 python: 3.5
 
 os:
@@ -7,9 +10,12 @@ os:
 
 env:
   - TOX_ENV=py27
-  #- TOX_ENV=py33
-  #- TOX_ENV=py34
+  - TOX_ENV=py33
+  - TOX_ENV=py34
 
+# For python3.5 and python3.6 the base python version
+# should be 3.5 and 3.6 accordingly to avoid
+# InterpreterNotFound error
 matrix:
   include:
     - python: 3.5
@@ -20,7 +26,7 @@ matrix:
 install:
   # install development dependencies into python2.7 regardless
   # of tox python version because socks4 twisted proxy server
-  # always runs on python2.7
+  # could be run only on python2.7
   - python2.7 -m pip install --user -r requirements_dev.txt
   - pip install tox
 
