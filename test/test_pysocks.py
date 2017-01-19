@@ -10,6 +10,9 @@ import sockshandler
 
 from test import config
 
+# The 10.0.0.0 IP is used to emulate connection timeout errors
+NON_ROUTABLE_IP = '10.0.0.0'
+
 
 class PySocksTestCase(TestCase):
     @classmethod
@@ -141,6 +144,7 @@ class PySocksTestCase(TestCase):
         self.assertEqual(200, res.getcode())
         self.assertEqual(content, body)
 
+
     # 4/13
     def test_http_ip_proxy(self):
         content = b'zzz'
@@ -152,6 +156,7 @@ class PySocksTestCase(TestCase):
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
         self.assertProxyResponse(data, content, address)
+
 
     # 5/13
     def test_socks4_ip_proxy(self):
@@ -165,6 +170,7 @@ class PySocksTestCase(TestCase):
         data = s.recv(2048)
         self.assertProxyResponse(data, content, address)
 
+
     # 6/13
     def test_socks5_ip_proxy(self):
         content = b'zzz'
@@ -177,20 +183,20 @@ class PySocksTestCase(TestCase):
         data = s.recv(2048)
         self.assertProxyResponse(data, content, address)
 
+
     # 7/13
-    def test_socks5_connect_timeout(self):
+    def test_socks5_proxy_connect_timeout(self):
+        """Test timeout during connecting to the proxy server"""
         s = socks.socksocket()
         s.settimeout(0.1)
-        # The 10.0.0.0 is non-routable IP
-        s.set_proxy(socks.SOCKS5, '10.0.0.0', config.SOCKS5_PROXY_PORT)
+        s.set_proxy(socks.SOCKS5, NON_ROUTABLE_IP, config.SOCKS5_PROXY_PORT)
         address = (config.TEST_HOST, config.TEST_SERVER_PORT)
         self.assertRaises(socks.ProxyConnectionError, s.connect,
                           address)
 
         s = socks.socksocket()
         s.settimeout(0.1)
-        # The 10.0.0.0 is non-routable IP
-        s.set_proxy(socks.SOCKS5, '10.0.0.0', config.SOCKS5_PROXY_PORT)
+        s.set_proxy(socks.SOCKS5, NON_ROUTABLE_IP, config.SOCKS5_PROXY_PORT)
         address = (config.TEST_HOST, config.TEST_SERVER_PORT)
         try:
             s.connect(address)
@@ -199,31 +205,44 @@ class PySocksTestCase(TestCase):
         else:
             assert False
 
+
     # 8/13
-    #def test_socks5_read_timeout(self):
-    #    self.test_server.response['sleep'] = 5
+    def test_socks5_negotiation_timeout(self):
+        """Test timeout during connectionto to destination server"""
+        s = socks.socksocket()
+        s.settimeout(0.1)
+        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        address = (NON_ROUTABLE_IP, config.TEST_SERVER_PORT)
+        self.assertRaises(socks.GeneralProxyError, s.connect,
+                          address)
 
-    #    s = socks.socksocket()
-    #    s.settimeout(0.1)
-    #    s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
-    #    address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        s = socks.socksocket()
+        s.settimeout(0.1)
+        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        address = (NON_ROUTABLE_IP, config.TEST_SERVER_PORT)
+        try:
+            s.connect(address)
+        except socks.GeneralProxyError as ex:
+            self.assertEqual(str(ex.socket_err), 'timed out')
+        else:
+            assert False
 
-    #    def func():
-    #        s.connect(address)
-    #        s.recv(1)
 
-    #    self.assertRaises(socks.GeneralProxyError, func)
+    # 8-1/13
+    def test_socks5_read_timeout(self):
+        """Test timeout during reading from the connected remote server"""
+        self.test_server.response['sleep'] = 5
 
-    #    s = socks.socksocket()
-    #    s.settimeout(0.1)
-    #    s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
-    #    try:
-    #        s.connect(address)
-    #        s.recv(1)
-    #    except socks.GeneralProxyError as ex:
-    #        self.assertEqual(str(ex.socket_err), 'timed out')
-    #    else:
-    #        assert False
+        s = socks.socksocket()
+        s.settimeout(0.1)
+        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+
+        def func():
+            s.connect(address)
+            s.recv(1)
+
+        self.assertRaises(socket.timeout, func)
 
 
     #def test_urllib2(self):
