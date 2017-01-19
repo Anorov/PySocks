@@ -48,9 +48,12 @@ def proxy_thread():
         out.write('\n'.join((
             'allow *',
             'auth none',
-            'proxy -a -n -p%d' % config.HTTP_PROXY_PORT,
-            'socks -p%d' % config.SOCKS4_PROXY_PORT,
-            'socks -p%d' % config.SOCKS5_PROXY_PORT,
+            'proxy -a -n -p%d -e%s' % (config.HTTP_PROXY_PORT,
+                                        config.PROXY_HOST_IP),
+            'socks -p%d -e%s' % (config.SOCKS4_PROXY_PORT,
+                                  config.PROXY_HOST_IP),
+            'socks -p%d -e%s' % (config.SOCKS5_PROXY_PORT,
+                                  config.PROXY_HOST_IP),
         )))
     cmd = 'test/bin/3proxy 3proxy.conf'
     server = Popen(cmd, shell=True)
