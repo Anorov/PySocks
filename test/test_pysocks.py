@@ -1,4 +1,5 @@
 from unittest import TestCase
+import unittest
 import socks
 import socket
 import six
@@ -13,6 +14,9 @@ from test import config
 # The 10.0.0.0 IP is used to emulate connection timeout errors
 NON_ROUTABLE_IP = '10.0.0.0'
 
+
+# TODO: test in all tests that remote IP is proxy
+# use 127.0.0.2 for proxy server
 
 class PySocksTestCase(TestCase):
     @classmethod
@@ -244,168 +248,110 @@ class PySocksTestCase(TestCase):
 
         self.assertRaises(socket.timeout, func)
 
+    # 9/13
+    @unittest.skipIf(six.PY3, 'test_server error on py3k')
+    def test_urllib2_http(self):
+        # TODO: fix error on py3k
+        '''
+        ..........ERROR:tornado.application:Exception in callback (<socket.socket fd=8, family=AddressFamily.AF_INET, type=2049, proto=6, laddr=('127.0.0.1', 7777)>, <function wrap.<locals>.null_wrapper at 0x7f23ca31dd90>)
+        Traceback (most recent call last):
+          File "/usr/local/lib/python3.4/dist-packages/tornado/ioloop.py", line 887, in start
+            handler_func(fd_obj, events)
+          File "/usr/local/lib/python3.4/dist-packages/tornado/stack_context.py", line 275, in null_wrapper
+            return fn(*args, **kwargs)
+          File "/usr/local/lib/python3.4/dist-packages/tornado/netutil.py", line 260, in accept_handler
+            connection, address = sock.accept()
+          File "/usr/lib/python3.4/socket.py", line 185, in accept
+            sock = socket(self.family, self.type, self.proto, fileno=fd)
+          File "/home/lorien/web/PySocks/socks.py", line 258, in __init__
+            raise ValueError(msg.format(type))
+        ValueError: Socket type must be stream or datagram, not 2049
+        '''
+        content = b'zzz'
+        self.test_server.response['data'] = content
+        socks.set_default_proxy(socks.HTTP, config.TEST_HOST,
+                                config.HTTP_PROXY_PORT)
+        socks.wrap_module(urllib2)
+        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        res = urllib2.urlopen(self.test_server.get_url())
+        resp_body = res.read()
+        self.assertEqual(200, res.getcode())
+        self.assertTrue(self.test_server.request['headers']['user-agent']
+                            .startswith('Python-urllib'))
+        self.assertEqual('%s:%d' % address,
+                         self.test_server.request['headers']['host'])
+        self.assertEqual(content, resp_body)
 
-    #def test_urllib2(self):
-    #    # ?????????????
-    #    # HTTPError: 405: Method Not Allowed
-    #    # [*] Note: The HTTP proxy server may not be supported by PySocks
-    #    # (must be a CONNECT tunnel proxy)
-    #    socks.set_default_proxy(socks.HTTP, TEST_HOST, TEST_SERVER_PORT)
-    #    socks.wrap_module(urllib2)
-    #    res = urllib2.urlopen(self.test_server.get_url())
-    #    self.assertEqual(200, res.getcode())
+
+    # 10/13
+    @unittest.skipIf(six.PY3, 'test_server error on py3k')
+    def test_urllib2_socks5(self):
+        # TODO: fix error on py3k
+        content = b'zzz'
+        self.test_server.response['data'] = content
+        socks.set_default_proxy(socks.SOCKS5, config.TEST_HOST,
+                                config.SOCKS5_PROXY_PORT)
+        socks.wrap_module(urllib2)
+        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        res = urllib2.urlopen(self.test_server.get_url())
+        resp_body = res.read()
+        self.assertEqual(200, res.getcode())
+        self.assertTrue(self.test_server.request['headers']['user-agent']
+                            .startswith('Python-urllib'))
+        self.assertEqual('%s:%d' % address,
+                         self.test_server.request['headers']['host'])
+        self.assertEqual(content, resp_body)
 
 
-#import sys
-#sys.path.append("..")
-#import socks
-#import socket
-#
-#PY3K = sys.version_info[0] == 3
-#
-#if PY3K:
-#    import urllib.request as urllib2
-#else:
-#    import sockshandler
-#    import urllib2
-#
+    # 11/13
+    @unittest.skipIf(six.PY3, 'test_server error on py3k')
+    def test_global_override_http(self):
+        # TODO: fix error on py3k
+        original_socket = socket.socket
+        try:
+            content = b'zzz'
+            self.test_server.response['data'] = content
+            socks.set_default_proxy(socks.HTTP, config.TEST_HOST,
+                                    config.HTTP_PROXY_PORT)
+            socket.socket = socks.socksocket
+            address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+            res = urllib2.urlopen(self.test_server.get_url())
+            resp_body = res.read()
+            self.assertEqual(200, res.getcode())
+            self.assertTrue(self.test_server.request['headers']['user-agent']
+                                .startswith('Python-urllib'))
+            self.assertEqual('%s:%d' % address,
+                             self.test_server.request['headers']['host'])
+            self.assertEqual(content, resp_body)
+        finally:
+            socket.socket = original_socket
 
-#def SOCKS5_connect_timeout_test():
-#    s = socks.socksocket()
-#    s.settimeout(0.0001)
-#    s.set_proxy(socks.SOCKS5, "8.8.8.8", 80)
-#    try:
-#        s.connect(("ifconfig.me", 80))
-#    except socks.ProxyConnectionError as e:
-#        assert str(e.socket_err) == "timed out"
-#
-#def SOCKS5_timeout_test():
-#    s = socks.socksocket()
-#    s.settimeout(0.0001)
-#    s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081)
-#    try:
-#        s.connect(("ifconfig.me", 4444))
-#    except socks.GeneralProxyError as e:
-#        assert str(e.socket_err) == "timed out"
-#
-#
-#def socket_SOCKS5_auth_test():
-#    # TODO: add support for this test. Will need a better SOCKS5 server.
-#    s = socks.socksocket()
-#    s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081, username="a", password="b")
-#    s.connect(("ifconfig.me", 80))
-#    s.sendall(build_http_request())
-#    status = s.recv(2048).splitlines()[0]
-#    assert status.startswith(b"HTTP/1.1 200")
-#
-#def socket_HTTP_IP_test():
-#    s = socks.socksocket()
-#    s.set_proxy(socks.HTTP, "127.0.0.1", 8081)
-#    s.connect(("133.242.129.236", 80))
-#    s.sendall(build_http_request())
-#    status = s.recv(2048).splitlines()[0]
-#    assert status.startswith(b"HTTP/1.1 200")
-#
-#def socket_SOCKS4_IP_test():
-#    s = socks.socksocket()
-#    s.set_proxy(socks.SOCKS4, "127.0.0.1", 1080)
-#    s.connect(("133.242.129.236", 80))
-#    s.sendall(build_http_request())
-#    status = s.recv(2048).splitlines()[0]
-#    assert status.startswith(b"HTTP/1.1 200")
-#
-#def socket_SOCKS5_IP_test():
-#    s = socks.socksocket()
-#    s.set_proxy(socks.SOCKS5, "127.0.0.1", 1081)
-#    s.connect(("133.242.129.236", 80))
-#    s.sendall(build_http_request())
-#    status = s.recv(2048).splitlines()[0]
-#    assert status.startswith(b"HTTP/1.1 200")
-#
-#def urllib2_SOCKS5_test():
-#    socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 1081)
-#    socks.wrap_module(urllib2)
-#    status = urllib2.urlopen("http://ifconfig.me/ip").getcode()
-#    assert status == 200
-#
-#def urllib2_handler_HTTP_test():
-#    import sockshandler
-#    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.HTTP, "127.0.0.1", 8081))
-#    status = opener.open("http://ifconfig.me/ip").getcode()
-#    assert status == 200
-#
-#def urllib2_handler_SOCKS5_test():
-#    import sockshandler
-#    opener = urllib2.build_opener(sockshandler.SocksiPyHandler(socks.SOCKS5, "127.0.0.1", 1081))
-#    status = opener.open("http://ifconfig.me/ip").getcode()
-#    assert status == 200
-#
-#def global_override_HTTP_test():
-#    socks.set_default_proxy(socks.HTTP, "127.0.0.1", 8081)
-#    good = socket.socket
-#    socket.socket = socks.socksocket
-#    status = urllib2.urlopen("http://ifconfig.me/ip").getcode()
-#    socket.socket = good
-#    assert status == 200
-#
-#def global_override_SOCKS5_test():
-#    default_proxy = (socks.SOCKS5, "127.0.0.1", 1081)
-#    socks.set_default_proxy(*default_proxy)
-#    good = socket.socket
-#    socket.socket = socks.socksocket
-#    status = urllib2.urlopen("http://ifconfig.me/ip").getcode()
-#    socket.socket = good
-#    assert status == 200
-#    assert socks.get_default_proxy()[1].decode() == default_proxy[1]
-#
-#def bail_early_with_ipv6_test():
-#    sock = socks.socksocket()
-#    ipv6_tuple = addr, port, flowinfo, scopeid = "::1", 1234, 0, 0
-#    try:
-#        sock.connect(ipv6_tuple)
-#    except socket.error:
-#        return
-#    else:
-#        assert False, "was expecting"
-#
-#def main():
-#    print("Running tests...")
-#    socket_HTTP_test()
-#    print("1/13")
-#    socket_SOCKS4_test()
-#    print("2/13")
-#    socket_SOCKS5_test()
-#    print("3/13")
-#    if not PY3K:
-#        urllib2_handler_HTTP_test()
-#        print("3.33/13")
-#        urllib2_handler_SOCKS5_test()
-#        print("3.66/13")
-#    socket_HTTP_IP_test()
-#    print("4/13")
-#    socket_SOCKS4_IP_test()
-#    print("5/13")
-#    socket_SOCKS5_IP_test()
-#    print("6/13")
 
-# ---- TODO: -------------
+    # 12/13
+    @unittest.skipIf(six.PY3, 'test_server error on py3k')
+    def test_global_override_socks5(self):
+        # TODO: fix error on py3k
+        original_socket = socket.socket
+        try:
+            content = b'zzz'
+            self.test_server.response['data'] = content
+            socks.set_default_proxy(socks.SOCKS5, config.TEST_HOST,
+                                    config.SOCKS5_PROXY_PORT)
+            socket.socket = socks.socksocket
+            address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+            res = urllib2.urlopen(self.test_server.get_url())
+            resp_body = res.read()
+            self.assertEqual(200, res.getcode())
+            self.assertTrue(self.test_server.request['headers']['user-agent']
+                                .startswith('Python-urllib'))
+            self.assertEqual('%s:%d' % address,
+                             self.test_server.request['headers']['host'])
+            self.assertEqual(content, resp_body)
+        finally:
+            socket.socket = original_socket
 
-#    SOCKS5_connect_timeout_test()
-#    print("7/13")
-#    SOCKS5_timeout_test()
-#    print("8/13")
-#    urllib2_HTTP_test()
-#    print("9/13")
-#    urllib2_SOCKS5_test()
-#    print("10/13")
-#    global_override_HTTP_test()
-#    print("11/13")
-#    global_override_SOCKS5_test()
-#    print("12/13")
-#    bail_early_with_ipv6_test()
-#    print("13/13")
-#    print("All tests ran successfully")
-#
-#
-#if __name__ == "__main__":
-#    main()
+    # 12/13
+    def test_ipv6(self):
+        sock = socks.socksocket()
+        ipv6_tuple = addr, port, flowinfo, scopeid = "::1", 1234, 0, 0
+        self.assertRaises(socket.error, sock.connect, ipv6_tuple)
