@@ -22,14 +22,14 @@ from test.test_pysocks import PySocksTestCase
 from test import config
 
 
-def wait_for_socket(server_name, port, timeout=2):
+def wait_for_socket(server_name, host, port, timeout=2):
     ok = False
     for x in range(10):
         try:
             print('Testing [%s] proxy server on %s:%d'
-                  % (server_name, config.TEST_HOST, port))
+                  % (server_name, host, port))
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((config.TEST_HOST, port))
+            s.connect((host, port))
             s.close()
         except socket.error as ex:
             print('ERROR', ex)
@@ -62,15 +62,19 @@ def start_servers():
     th.daemon = True
     th.start()
 
-    test_server = TestServer(address=config.TEST_HOST,
+    test_server = TestServer(address=config.TEST_SERVER_HOST,
                              port=config.TEST_SERVER_PORT)
     test_server.start()
     config.test_server = test_server
 
-    wait_for_socket('3proxy:http', config.HTTP_PROXY_PORT)
-    wait_for_socket('3proxy:socks4', config.SOCKS4_PROXY_PORT)
-    wait_for_socket('3proxy:socks5', config.SOCKS5_PROXY_PORT)
-    wait_for_socket('test-server', config.TEST_SERVER_PORT)
+    wait_for_socket('3proxy:http', config.PROXY_HOST_IP,
+                    config.HTTP_PROXY_PORT)
+    wait_for_socket('3proxy:socks4', config.PROXY_HOST_IP,
+                    config.SOCKS4_PROXY_PORT)
+    wait_for_socket('3proxy:socks5', config.PROXY_HOST_IP,
+                    config.SOCKS5_PROXY_PORT)
+    wait_for_socket('test-server', config.TEST_SERVER_HOST_IP,
+                    config.TEST_SERVER_PORT)
 
 
 def main():

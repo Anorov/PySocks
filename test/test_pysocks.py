@@ -54,7 +54,7 @@ class PySocksTestCase(TestCase):
     # 0/13
     def test_stdlib_socket(self):
         content = b'zzz'
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         self.test_server.response['data'] = content
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(address)
@@ -67,9 +67,9 @@ class PySocksTestCase(TestCase):
     def test_http_proxy(self):
         content = b'zzz'
         self.test_server.response['data'] = content
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         s = socks.socksocket()
-        s.set_proxy(socks.HTTP, config.TEST_HOST, config.HTTP_PROXY_PORT)
+        s.set_proxy(socks.HTTP, config.PROXY_HOST_IP, config.HTTP_PROXY_PORT)
         s.connect(address)
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
@@ -80,9 +80,9 @@ class PySocksTestCase(TestCase):
     def test_socks4_proxy(self):
         content = b'zzz'
         self.test_server.response['data'] = content
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         s = socks.socksocket()
-        s.set_proxy(socks.SOCKS4, config.TEST_HOST, config.SOCKS4_PROXY_PORT)
+        s.set_proxy(socks.SOCKS4, config.PROXY_HOST_IP, config.SOCKS4_PROXY_PORT)
         s.connect(address)
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
@@ -93,9 +93,9 @@ class PySocksTestCase(TestCase):
     def test_socks5_proxy(self):
         content = b'zzz'
         self.test_server.response['data'] = content
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         s = socks.socksocket()
-        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        s.set_proxy(socks.SOCKS5, config.PROXY_HOST_IP, config.SOCKS5_PROXY_PORT)
         s.connect(address)
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
@@ -106,12 +106,12 @@ class PySocksTestCase(TestCase):
         content = b'zzz'
         self.test_server.response['data'] = content
         opener = urllib2.build_opener(sockshandler.SocksiPyHandler(
-            socks.HTTP, config.TEST_HOST, config.HTTP_PROXY_PORT))
+            socks.HTTP, config.PROXY_HOST_IP, config.HTTP_PROXY_PORT))
         res = opener.open(self.test_server.get_url())
         body = res.read()
         self.assertTrue(self.test_server.request['headers']['user-agent']
                             .startswith('Python-urllib'))
-        self.assertEqual('%s:%d' % (config.TEST_HOST, config.TEST_SERVER_PORT),
+        self.assertEqual('%s:%d' % (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT),
                          self.test_server.request['headers']['host'])
         self.assertEqual(200, res.getcode())
         self.assertEqual(content, body)
@@ -122,12 +122,12 @@ class PySocksTestCase(TestCase):
         content = b'zzz'
         self.test_server.response['data'] = content
         opener = urllib2.build_opener(sockshandler.SocksiPyHandler(
-            socks.SOCKS4, config.TEST_HOST, config.SOCKS4_PROXY_PORT))
+            socks.SOCKS4, config.PROXY_HOST_IP, config.SOCKS4_PROXY_PORT))
         res = opener.open(self.test_server.get_url())
         body = res.read()
         self.assertTrue(self.test_server.request['headers']['user-agent']
                             .startswith('Python-urllib'))
-        self.assertEqual('%s:%d' % (config.TEST_HOST, config.TEST_SERVER_PORT),
+        self.assertEqual('%s:%d' % (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT),
                          self.test_server.request['headers']['host'])
         self.assertEqual(200, res.getcode())
         self.assertEqual(content, body)
@@ -138,12 +138,12 @@ class PySocksTestCase(TestCase):
         content = b'zzz'
         self.test_server.response['data'] = content
         opener = urllib2.build_opener(sockshandler.SocksiPyHandler(
-            socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT))
+            socks.SOCKS5, config.PROXY_HOST_IP, config.SOCKS5_PROXY_PORT))
         res = opener.open(self.test_server.get_url())
         body = res.read()
         self.assertTrue(self.test_server.request['headers']['user-agent']
                             .startswith('Python-urllib'))
-        self.assertEqual('%s:%d' % (config.TEST_HOST, config.TEST_SERVER_PORT),
+        self.assertEqual('%s:%d' % (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT),
                          self.test_server.request['headers']['host'])
         self.assertEqual(200, res.getcode())
         self.assertEqual(content, body)
@@ -153,9 +153,9 @@ class PySocksTestCase(TestCase):
     def test_http_ip_proxy(self):
         content = b'zzz'
         self.test_server.response['data'] = content
-        address = (config.TEST_HOST_IP, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST_IP, config.TEST_SERVER_PORT)
         s = socks.socksocket()
-        s.set_proxy(socks.HTTP, config.TEST_HOST_IP, config.HTTP_PROXY_PORT)
+        s.set_proxy(socks.HTTP, config.PROXY_HOST_IP, config.HTTP_PROXY_PORT)
         s.connect(address)
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
@@ -166,9 +166,9 @@ class PySocksTestCase(TestCase):
     def test_socks4_ip_proxy(self):
         content = b'zzz'
         self.test_server.response['data'] = content
-        address = (config.TEST_HOST_IP, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST_IP, config.TEST_SERVER_PORT)
         s = socks.socksocket()
-        s.set_proxy(socks.SOCKS4, config.TEST_HOST_IP, config.SOCKS4_PROXY_PORT)
+        s.set_proxy(socks.SOCKS4, config.PROXY_HOST_IP, config.SOCKS4_PROXY_PORT)
         s.connect(address)
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
@@ -179,9 +179,9 @@ class PySocksTestCase(TestCase):
     def test_socks5_ip_proxy(self):
         content = b'zzz'
         self.test_server.response['data'] = content
-        address = (config.TEST_HOST_IP, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST_IP, config.TEST_SERVER_PORT)
         s = socks.socksocket()
-        s.set_proxy(socks.SOCKS5, config.TEST_HOST_IP, config.SOCKS5_PROXY_PORT)
+        s.set_proxy(socks.SOCKS5, config.PROXY_HOST_IP, config.SOCKS5_PROXY_PORT)
         s.connect(address)
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
@@ -194,14 +194,14 @@ class PySocksTestCase(TestCase):
         s = socks.socksocket()
         s.settimeout(0.1)
         s.set_proxy(socks.SOCKS5, NON_ROUTABLE_IP, config.SOCKS5_PROXY_PORT)
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         self.assertRaises(socks.ProxyConnectionError, s.connect,
                           address)
 
         s = socks.socksocket()
         s.settimeout(0.1)
         s.set_proxy(socks.SOCKS5, NON_ROUTABLE_IP, config.SOCKS5_PROXY_PORT)
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         try:
             s.connect(address)
         except socks.ProxyConnectionError as ex:
@@ -215,14 +215,14 @@ class PySocksTestCase(TestCase):
         """Test timeout during connectionto to destination server"""
         s = socks.socksocket()
         s.settimeout(0.1)
-        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        s.set_proxy(socks.SOCKS5, config.PROXY_HOST_IP, config.SOCKS5_PROXY_PORT)
         address = (NON_ROUTABLE_IP, config.TEST_SERVER_PORT)
         self.assertRaises(socks.GeneralProxyError, s.connect,
                           address)
 
         s = socks.socksocket()
         s.settimeout(0.1)
-        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
+        s.set_proxy(socks.SOCKS5, config.PROXY_HOST_IP, config.SOCKS5_PROXY_PORT)
         address = (NON_ROUTABLE_IP, config.TEST_SERVER_PORT)
         try:
             s.connect(address)
@@ -239,8 +239,8 @@ class PySocksTestCase(TestCase):
 
         s = socks.socksocket()
         s.settimeout(0.1)
-        s.set_proxy(socks.SOCKS5, config.TEST_HOST, config.SOCKS5_PROXY_PORT)
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        s.set_proxy(socks.SOCKS5, config.PROXY_HOST_IP, config.SOCKS5_PROXY_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
 
         def func():
             s.connect(address)
@@ -269,10 +269,10 @@ class PySocksTestCase(TestCase):
         '''
         content = b'zzz'
         self.test_server.response['data'] = content
-        socks.set_default_proxy(socks.HTTP, config.TEST_HOST,
+        socks.set_default_proxy(socks.HTTP, config.PROXY_HOST_IP,
                                 config.HTTP_PROXY_PORT)
         socks.wrap_module(urllib2)
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         res = urllib2.urlopen(self.test_server.get_url())
         resp_body = res.read()
         self.assertEqual(200, res.getcode())
@@ -289,10 +289,10 @@ class PySocksTestCase(TestCase):
         # TODO: fix error on py3k
         content = b'zzz'
         self.test_server.response['data'] = content
-        socks.set_default_proxy(socks.SOCKS5, config.TEST_HOST,
+        socks.set_default_proxy(socks.SOCKS5, config.PROXY_HOST_IP,
                                 config.SOCKS5_PROXY_PORT)
         socks.wrap_module(urllib2)
-        address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         res = urllib2.urlopen(self.test_server.get_url())
         resp_body = res.read()
         self.assertEqual(200, res.getcode())
@@ -311,10 +311,10 @@ class PySocksTestCase(TestCase):
         try:
             content = b'zzz'
             self.test_server.response['data'] = content
-            socks.set_default_proxy(socks.HTTP, config.TEST_HOST,
+            socks.set_default_proxy(socks.HTTP, config.PROXY_HOST_IP,
                                     config.HTTP_PROXY_PORT)
             socket.socket = socks.socksocket
-            address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+            address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
             res = urllib2.urlopen(self.test_server.get_url())
             resp_body = res.read()
             self.assertEqual(200, res.getcode())
@@ -335,10 +335,10 @@ class PySocksTestCase(TestCase):
         try:
             content = b'zzz'
             self.test_server.response['data'] = content
-            socks.set_default_proxy(socks.SOCKS5, config.TEST_HOST,
+            socks.set_default_proxy(socks.SOCKS5, config.PROXY_HOST_IP,
                                     config.SOCKS5_PROXY_PORT)
             socket.socket = socks.socksocket
-            address = (config.TEST_HOST, config.TEST_SERVER_PORT)
+            address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
             res = urllib2.urlopen(self.test_server.get_url())
             resp_body = res.read()
             self.assertEqual(200, res.getcode())
