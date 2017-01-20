@@ -20,27 +20,7 @@ import socket
 
 from test.test_pysocks import PySocksTestCase
 from test import config
-
-
-def wait_for_socket(server_name, host, port, timeout=2):
-    ok = False
-    for x in range(10):
-        try:
-            print('Testing [%s] proxy server on %s:%d'
-                  % (server_name, host, port))
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((host, port))
-            s.close()
-        except socket.error as ex:
-            print('ERROR', ex)
-            time.sleep(timeout/10.0)
-        else:
-            print('Connection established')
-            ok = True
-            break
-    if not ok:
-        raise Exception('The %s proxy server has not started in %d seconds'
-                        % (server_name, timeout))
+from test.util import wait_for_socket
 
 
 def proxy_thread():
@@ -64,20 +44,12 @@ def start_servers():
     th = Thread(target=proxy_thread)
     th.daemon = True
     th.start()
-
-    test_server = TestServer(address=config.TEST_SERVER_HOST,
-                             port=config.TEST_SERVER_PORT)
-    test_server.start()
-    config.test_server = test_server
-
     wait_for_socket('3proxy:http', config.PROXY_HOST_IP,
                     config.HTTP_PROXY_PORT)
     wait_for_socket('3proxy:socks4', config.PROXY_HOST_IP,
                     config.SOCKS4_PROXY_PORT)
     wait_for_socket('3proxy:socks5', config.PROXY_HOST_IP,
                     config.SOCKS5_PROXY_PORT)
-    wait_for_socket('test-server', config.TEST_SERVER_HOST_IP,
-                    config.TEST_SERVER_PORT)
 
 
 def main():
@@ -90,8 +62,6 @@ def main():
         suite = loader.loadTestsFromTestCase(PySocksTestCase)
         runner = unittest.TextTestRunner()
         result = runner.run(suite)
-        if config.test_server:
-            config.test_server.stop()
     except Exception as ex:
         logging.error('', exc_info=ex)
     finally:

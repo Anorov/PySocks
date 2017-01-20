@@ -8,21 +8,47 @@ if six.PY3:
 else:
     import urllib2
 import sockshandler
+from test_server import TestServer
 
+from test.util import wait_for_socket
 from test import config
 
 # The 10.0.0.0 IP is used to emulate connection timeout errors
 NON_ROUTABLE_IP = '10.0.0.0'
 
 
-# TODO: test in all tests that remote IP is proxy
-# use 127.0.0.2 for proxy server
+def start_extra_test_server():
+    from multiprocessing import Event, Process, Queue
+
+    def server_process(wait_event, server_queue):
+        test_server = TestServer(address=config.TEST_SERVER_HOST_IP,
+                                 port=config.TEST_SERVER_EXTRA_PORT)
+        test_server.start()
+        test_server.response['data'] = b'zzz'
+        wait_event.wait()
+        server_queue.put(test_server.request)
+        test_server.stop()
+
+    wait_event = Event()
+    server_queue = Queue()
+    proc = Process(target=server_process, args=[wait_event, server_queue])
+    proc.daemon = True
+    proc.start()
+    wait_for_socket('extra-test-server', config.TEST_SERVER_HOST_IP,
+                                         config.TEST_SERVER_EXTRA_PORT)
+    return wait_event, server_queue
+
 
 class PySocksTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
-        assert config.test_server is not None
-        cls.test_server = config.test_server
+        cls.test_server = TestServer(address=config.TEST_SERVER_HOST,
+                                     port=config.TEST_SERVER_PORT)
+        cls.test_server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.test_server.stop()
 
     def setUp(self):
         self.test_server.reset()
@@ -253,104 +279,105 @@ class PySocksTestCase(TestCase):
         self.assertRaises(socket.timeout, func)
 
     # 9/13
-    @unittest.skipIf(six.PY3, 'test_server error on py3k')
     def test_urllib2_http(self):
-        # TODO: fix error on py3k
-        '''
-        ..........ERROR:tornado.application:Exception in callback (<socket.socket fd=8, family=AddressFamily.AF_INET, type=2049, proto=6, laddr=('127.0.0.1', 7777)>, <function wrap.<locals>.null_wrapper at 0x7f23ca31dd90>)
-        Traceback (most recent call last):
-          File "/usr/local/lib/python3.4/dist-packages/tornado/ioloop.py", line 887, in start
-            handler_func(fd_obj, events)
-          File "/usr/local/lib/python3.4/dist-packages/tornado/stack_context.py", line 275, in null_wrapper
-            return fn(*args, **kwargs)
-          File "/usr/local/lib/python3.4/dist-packages/tornado/netutil.py", line 260, in accept_handler
-            connection, address = sock.accept()
-          File "/usr/lib/python3.4/socket.py", line 185, in accept
-            sock = socket(self.family, self.type, self.proto, fileno=fd)
-          File "/home/lorien/web/PySocks/socks.py", line 258, in __init__
-            raise ValueError(msg.format(type))
-        ValueError: Socket type must be stream or datagram, not 2049
-        '''
-        content = b'zzz'
-        self.test_server.response['data'] = content
-        socks.set_default_proxy(socks.HTTP, config.PROXY_HOST_IP,
-                                config.HTTP_PROXY_PORT)
-        socks.wrap_module(urllib2)
-        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
-        res = urllib2.urlopen(self.test_server.get_url())
-        resp_body = res.read()
-        self.assertEqual(200, res.getcode())
-        self.assertTrue(self.test_server.request['headers']['user-agent']
-                            .startswith('Python-urllib'))
-        self.assertEqual('%s:%d' % address,
-                         self.test_server.request['headers']['host'])
-        self.assertEqual(content, resp_body)
+        wait_event, server_queue = start_extra_test_server()
+        original_socket = urllib2.socket.socket
+        try:
+            socks.set_default_proxy(socks.HTTP, config.PROXY_HOST_IP,
+                                    config.HTTP_PROXY_PORT)
+            socks.wrap_module(urllib2)
+            address = (config.TEST_SERVER_HOST,
+                       config.TEST_SERVER_EXTRA_PORT)
+            url = 'http://%s:%d/' % address 
+            res = urllib2.urlopen(url)
+            resp_body = res.read()
+            wait_event.set()
+            request = server_queue.get(block=True, timeout=1)
+            self.assertEqual(200, res.getcode())
+            self.assertEqual(b'zzz', resp_body)
+
+            self.assertTrue(request['headers']['user-agent']
+                                .startswith('Python-urllib'))
+            self.assertEqual('%s:%d' % address,
+                             request['headers']['host'])
+        finally:
+            urllib2.socket.socket = original_socket
 
 
     # 10/13
-    @unittest.skipIf(six.PY3, 'test_server error on py3k')
     def test_urllib2_socks5(self):
-        # TODO: fix error on py3k
-        content = b'zzz'
-        self.test_server.response['data'] = content
-        socks.set_default_proxy(socks.SOCKS5, config.PROXY_HOST_IP,
-                                config.SOCKS5_PROXY_PORT)
-        socks.wrap_module(urllib2)
-        address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
-        res = urllib2.urlopen(self.test_server.get_url())
-        resp_body = res.read()
-        self.assertEqual(200, res.getcode())
-        self.assertTrue(self.test_server.request['headers']['user-agent']
-                            .startswith('Python-urllib'))
-        self.assertEqual('%s:%d' % address,
-                         self.test_server.request['headers']['host'])
-        self.assertEqual(content, resp_body)
+        wait_event, server_queue = start_extra_test_server()
+        original_socket = urllib2.socket.socket
+        try:
+            socks.set_default_proxy(socks.SOCKS5, config.PROXY_HOST_IP,
+                                    config.SOCKS5_PROXY_PORT)
+            socks.wrap_module(urllib2)
+            address = (config.TEST_SERVER_HOST,
+                       config.TEST_SERVER_EXTRA_PORT)
+            url = 'http://%s:%d/' % address 
+            res = urllib2.urlopen(url)
+            resp_body = res.read()
+            wait_event.set()
+            request = server_queue.get(block=True, timeout=1)
+            self.assertEqual(200, res.getcode())
+            self.assertEqual(b'zzz', resp_body)
+
+            self.assertTrue(request['headers']['user-agent']
+                                .startswith('Python-urllib'))
+            self.assertEqual('%s:%d' % address,
+                             request['headers']['host'])
+        finally:
+            urllib2.socket.socket = original_socket
 
 
     # 11/13
-    @unittest.skipIf(six.PY3, 'test_server error on py3k')
     def test_global_override_http(self):
-        # TODO: fix error on py3k
+        wait_event, server_queue = start_extra_test_server()
         original_socket = socket.socket
         try:
-            content = b'zzz'
-            self.test_server.response['data'] = content
             socks.set_default_proxy(socks.HTTP, config.PROXY_HOST_IP,
                                     config.HTTP_PROXY_PORT)
             socket.socket = socks.socksocket
-            address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
-            res = urllib2.urlopen(self.test_server.get_url())
+            address = (config.TEST_SERVER_HOST,
+                       config.TEST_SERVER_EXTRA_PORT)
+            url = 'http://%s:%d/' % address 
+            res = urllib2.urlopen(url)
             resp_body = res.read()
+            wait_event.set()
+            request = server_queue.get(block=True, timeout=1)
             self.assertEqual(200, res.getcode())
-            self.assertTrue(self.test_server.request['headers']['user-agent']
+            self.assertEqual(b'zzz', resp_body)
+
+            self.assertTrue(request['headers']['user-agent']
                                 .startswith('Python-urllib'))
             self.assertEqual('%s:%d' % address,
-                             self.test_server.request['headers']['host'])
-            self.assertEqual(content, resp_body)
+                             request['headers']['host'])
         finally:
             socket.socket = original_socket
 
 
     # 12/13
-    @unittest.skipIf(six.PY3, 'test_server error on py3k')
     def test_global_override_socks5(self):
-        # TODO: fix error on py3k
+        wait_event, server_queue = start_extra_test_server()
         original_socket = socket.socket
         try:
-            content = b'zzz'
-            self.test_server.response['data'] = content
             socks.set_default_proxy(socks.SOCKS5, config.PROXY_HOST_IP,
                                     config.SOCKS5_PROXY_PORT)
             socket.socket = socks.socksocket
-            address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
-            res = urllib2.urlopen(self.test_server.get_url())
+            address = (config.TEST_SERVER_HOST,
+                       config.TEST_SERVER_EXTRA_PORT)
+            url = 'http://%s:%d/' % address 
+            res = urllib2.urlopen(url)
             resp_body = res.read()
+            wait_event.set()
+            request = server_queue.get(block=True, timeout=1)
             self.assertEqual(200, res.getcode())
-            self.assertTrue(self.test_server.request['headers']['user-agent']
+            self.assertEqual(b'zzz', resp_body)
+
+            self.assertTrue(request['headers']['user-agent']
                                 .startswith('Python-urllib'))
             self.assertEqual('%s:%d' % address,
-                             self.test_server.request['headers']['host'])
-            self.assertEqual(content, resp_body)
+                             request['headers']['host'])
         finally:
             socket.socket = original_socket
 
