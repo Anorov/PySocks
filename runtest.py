@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 """
-To run this tests you need python2.7
-EVEN if you run tests agains python3.x
-because twisted socsk4 proxy server could be run
-only on python2.7
+These tests use 3proxy software as http/socks4/socks5 proxy service.
+The 3proxy binary is located in test/bin/3proxy
 """
 import unittest
 import sys
@@ -56,8 +54,6 @@ def main():
     result = None
     try:
         start_servers()
-        #time.sleep(1) # let CPU to process all this proxy stuff
-
         loader = unittest.TestLoader()
         suite = loader.loadTestsFromTestCase(PySocksTestCase)
         runner = unittest.TextTestRunner()
