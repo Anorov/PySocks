@@ -14,4 +14,3 @@ setup(
     keywords = ["socks", "proxy"],
     py_modules=["socks", "sockshandler"]
 )
-
