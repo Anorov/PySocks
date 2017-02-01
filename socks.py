@@ -256,7 +256,7 @@ class socksocket(_BaseSocket):
             msg = "Socket type must be stream or datagram, not {!r}"
             raise ValueError(msg.format(type))
 
-        _BaseSocket.__init__(self, family, type, proto, *args, **kwargs)
+        super(socksocket, self).__init__(family, type, proto, *args, **kwargs)
         self._proxyconn = None  # TCP connection to keep UDP relay alive
 
         if self.default_proxy:
@@ -286,7 +286,7 @@ class socksocket(_BaseSocket):
         try:
             # test if we're connected, if so apply timeout
             peer = self.get_proxy_peername()
-            _BaseSocket.settimeout(self, self._timeout)
+            super(socksocket, self).settimeout(self._timeout)
         except socket.error:
             pass
 
@@ -337,7 +337,7 @@ class socksocket(_BaseSocket):
         if proxy_type != SOCKS5:
             msg = "UDP only supported by SOCKS5 proxy type"
             raise socket.error(EOPNOTSUPP, msg)
-        _BaseSocket.bind(self, *pos, **kw)
+        super(socksocket, self).bind(*pos, **kw)
 
         # Need to specify actual local port because
         # some relays drop packets if a port of zero is specified.
@@ -356,13 +356,13 @@ class socksocket(_BaseSocket):
         # but some proxies return a private IP address (10.x.y.z)
         host, _ = proxy
         _, port = relay
-        _BaseSocket.connect(self, (host, port))
-        _BaseSocket.settimeout(self, self._timeout)
+        super(socksocket, self).connect((host, port))
+        super(socksocket, self).settimeout(self._timeout)
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
 
     def sendto(self, bytes, *args, **kwargs):
         if self.type != socket.SOCK_DGRAM:
-            return _BaseSocket.sendto(self, bytes, *args, **kwargs)
+            return super(socksocket, self).sendto(bytes, *args, **kwargs)
         if not self._proxyconn:
             self.bind(("", 0))
 
@@ -376,22 +376,22 @@ class socksocket(_BaseSocket):
         header.write(STANDALONE)
         self._write_SOCKS5_address(address, header)
 
-        sent = _BaseSocket.send(self, header.getvalue() + bytes, *flags, **kwargs)
+        sent = super(socksocket, self).send(header.getvalue() + bytes, *flags, **kwargs)
         return sent - header.tell()
 
     def send(self, bytes, flags=0, **kwargs):
         if self.type == socket.SOCK_DGRAM:
             return self.sendto(bytes, flags, self.proxy_peername, **kwargs)
         else:
-            return _BaseSocket.send(self, bytes, flags, **kwargs)
+            return super(socksocket, self).send(bytes, flags, **kwargs)
 
     def recvfrom(self, bufsize, flags=0):
         if self.type != socket.SOCK_DGRAM:
-            return _BaseSocket.recvfrom(self, bufsize, flags)
+            return super(socksocket, self).recvfrom(bufsize, flags)
         if not self._proxyconn:
             self.bind(("", 0))
 
-        buf = BytesIO(_BaseSocket.recv(self, bufsize + 1024, flags))
+        buf = BytesIO(super(socksocket, self).recv(bufsize + 1024, flags))
         buf.seek(2, SEEK_CUR)
         frag = buf.read(1)
         if ord(frag):
@@ -412,7 +412,7 @@ class socksocket(_BaseSocket):
     def close(self):
         if self._proxyconn:
             self._proxyconn.close()
-        return _BaseSocket.close(self)
+        return super(socksocket, self).close()
 
     def get_proxy_sockname(self):
         """
@@ -426,7 +426,7 @@ class socksocket(_BaseSocket):
         """
         Returns the IP and port number of the proxy.
         """
-        return _BaseSocket.getpeername(self)
+        return super(socksocket, self).getpeername()
 
     getproxypeername = get_proxy_peername
 
@@ -525,7 +525,7 @@ class socksocket(_BaseSocket):
             # Get the bound address/port
             bnd = self._read_SOCKS5_address(reader)
 
-            _BaseSocket.settimeout(self, self._timeout)
+            super(socksocket, self).settimeout(self._timeout)
             return (resolved, bnd)
         finally:
             reader.close()
@@ -749,20 +749,20 @@ class socksocket(_BaseSocket):
 
         # We set the timeout here so that we don't hang in connection or during
         # negotiation.
-        _BaseSocket.settimeout(self, self._timeout)
+        super(socksocket, self).settimeout(self._timeout)
 
         if proxy_type is None:
             # Treat like regular socket object
             self.proxy_peername = dest_pair
-            _BaseSocket.settimeout(self, self._timeout)
-            _BaseSocket.connect(self, (dest_addr, dest_port))
+            super(socksocket, self).settimeout(self._timeout)
+            super(socksocket, self).connect((dest_addr, dest_port))
             return
 
         proxy_addr = self._proxy_addr()
 
         try:
             # Initial connection to proxy server.
-            _BaseSocket.connect(self, proxy_addr)
+            super(socksocket, self).connect(proxy_addr)
 
         except socket.error as error:
             # Error while connecting to proxy
