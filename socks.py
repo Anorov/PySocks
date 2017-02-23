@@ -92,7 +92,7 @@ def set_self_blocking(function):
                 self.setblocking(True)
             return function(*args, **kwargs)
         except Exception as e:
-            raise(e)
+            raise
         finally:
             # set orgin blcoking
             if _is_blocking == 0:
