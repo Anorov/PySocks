@@ -60,6 +60,7 @@ from io import BytesIO
 from os import SEEK_CUR
 import os
 import sys
+import functools
 from collections import Callable
 from base64 import b64encode
 
@@ -78,6 +79,25 @@ PROXY_TYPES = {"SOCKS4": SOCKS4, "SOCKS5": SOCKS5, "HTTP": HTTP}
 PRINTABLE_PROXY_TYPES = dict(zip(PROXY_TYPES.values(), PROXY_TYPES.keys()))
 
 _orgsocket = _orig_socket = socket.socket
+
+
+def set_self_blocking(function):
+
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+        self = args[0]
+        try:
+            _is_blocking =  self.gettimeout()
+            if _is_blocking == 0:
+                self.setblocking(True)
+            return function(*args, **kwargs)
+        except Exception as e:
+            raise(e)
+        finally:
+            # set orgin blcoking
+            if _is_blocking == 0:
+                self.setblocking(False)
+    return wrapper
 
 class ProxyError(IOError):
     """
@@ -707,7 +727,7 @@ class socksocket(_BaseSocket):
                            HTTP: _negotiate_HTTP
                          }
 
-
+    @set_self_blocking
     def connect(self, dest_pair):
         """
         Connects to the specified destination through a proxy.
