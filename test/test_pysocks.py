@@ -17,33 +17,12 @@ from test import config
 NON_ROUTABLE_IP = '10.0.0.0'
 
 
-def start_extra_test_server():
-    from multiprocessing import Event, Process, Queue
-
-    def server_process(wait_event, server_queue):
-        test_server = TestServer(address=config.TEST_SERVER_HOST_IP,
-                                 port=config.TEST_SERVER_EXTRA_PORT)
-        test_server.start()
-        test_server.response['data'] = b'zzz'
-        wait_event.wait()
-        server_queue.put(test_server.request)
-        test_server.stop()
-
-    wait_event = Event()
-    server_queue = Queue()
-    proc = Process(target=server_process, args=[wait_event, server_queue])
-    proc.daemon = True
-    proc.start()
-    wait_for_socket('extra-test-server', config.TEST_SERVER_HOST_IP,
-                                         config.TEST_SERVER_EXTRA_PORT)
-    return wait_event, server_queue
-
-
 class PySocksTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.test_server = TestServer(address=config.TEST_SERVER_HOST,
-                                     port=config.TEST_SERVER_PORT)
+                                     port=config.TEST_SERVER_PORT,
+                                     engine='subprocess')
         cls.test_server.start()
 
     @classmethod
@@ -111,7 +90,8 @@ class PySocksTestCase(TestCase):
         self.test_server.response['data'] = content
         address = (config.TEST_SERVER_HOST, config.TEST_SERVER_PORT)
         s = socks.socksocket()
-        s.set_proxy(socks.SOCKS4, config.PROXY_HOST_IP, config.SOCKS4_PROXY_PORT)
+        s.set_proxy(socks.SOCKS4, config.PROXY_HOST_IP,
+                    config.SOCKS4_PROXY_PORT)
         s.connect(address)
         s.sendall(self.build_http_request(*address))
         data = s.recv(2048)
@@ -280,104 +260,100 @@ class PySocksTestCase(TestCase):
 
     # 9/13
     def test_urllib2_http(self):
-        wait_event, server_queue = start_extra_test_server()
         original_socket = urllib2.socket.socket
         try:
+            self.test_server.response['data'] = b'zzz'
             socks.set_default_proxy(socks.HTTP, config.PROXY_HOST_IP,
                                     config.HTTP_PROXY_PORT)
             socks.wrap_module(urllib2)
             address = (config.TEST_SERVER_HOST,
-                       config.TEST_SERVER_EXTRA_PORT)
+                       config.TEST_SERVER_PORT)
             url = 'http://%s:%d/' % address 
             res = urllib2.urlopen(url)
             resp_body = res.read()
-            wait_event.set()
-            request = server_queue.get(block=True, timeout=1)
             self.assertEqual(200, res.getcode())
             self.assertEqual(b'zzz', resp_body)
 
-            self.assertTrue(request['headers']['user-agent']
-                                .startswith('Python-urllib'))
+            self.assertTrue(self.test_server
+                            .request['headers']['user-agent']
+                            .startswith('Python-urllib'))
             self.assertEqual('%s:%d' % address,
-                             request['headers']['host'])
+                             self.test_server.request['headers']['host'])
         finally:
             urllib2.socket.socket = original_socket
 
 
     # 10/13
     def test_urllib2_socks5(self):
-        wait_event, server_queue = start_extra_test_server()
         original_socket = urllib2.socket.socket
         try:
+            self.test_server.response['data'] = b'zzz'
             socks.set_default_proxy(socks.SOCKS5, config.PROXY_HOST_IP,
                                     config.SOCKS5_PROXY_PORT)
             socks.wrap_module(urllib2)
             address = (config.TEST_SERVER_HOST,
-                       config.TEST_SERVER_EXTRA_PORT)
+                       config.TEST_SERVER_PORT)
             url = 'http://%s:%d/' % address 
             res = urllib2.urlopen(url)
             resp_body = res.read()
-            wait_event.set()
-            request = server_queue.get(block=True, timeout=1)
             self.assertEqual(200, res.getcode())
             self.assertEqual(b'zzz', resp_body)
 
-            self.assertTrue(request['headers']['user-agent']
-                                .startswith('Python-urllib'))
+            self.assertTrue(self.test_server
+                            .request['headers']['user-agent']
+                            .startswith('Python-urllib'))
             self.assertEqual('%s:%d' % address,
-                             request['headers']['host'])
+                             self.test_server.request['headers']['host'])
         finally:
             urllib2.socket.socket = original_socket
 
 
     # 11/13
     def test_global_override_http(self):
-        wait_event, server_queue = start_extra_test_server()
         original_socket = socket.socket
         try:
+            self.test_server.response['data'] = b'zzz'
             socks.set_default_proxy(socks.HTTP, config.PROXY_HOST_IP,
                                     config.HTTP_PROXY_PORT)
             socket.socket = socks.socksocket
             address = (config.TEST_SERVER_HOST,
-                       config.TEST_SERVER_EXTRA_PORT)
+                       config.TEST_SERVER_PORT)
             url = 'http://%s:%d/' % address 
             res = urllib2.urlopen(url)
             resp_body = res.read()
-            wait_event.set()
-            request = server_queue.get(block=True, timeout=1)
             self.assertEqual(200, res.getcode())
             self.assertEqual(b'zzz', resp_body)
 
-            self.assertTrue(request['headers']['user-agent']
-                                .startswith('Python-urllib'))
+            self.assertTrue(self.test_server
+                            .request['headers']['user-agent']
+                            .startswith('Python-urllib'))
             self.assertEqual('%s:%d' % address,
-                             request['headers']['host'])
+                             self.test_server.request['headers']['host'])
         finally:
             socket.socket = original_socket
 
 
     # 12/13
     def test_global_override_socks5(self):
-        wait_event, server_queue = start_extra_test_server()
         original_socket = socket.socket
         try:
+            self.test_server.response['data'] = b'zzz'
             socks.set_default_proxy(socks.SOCKS5, config.PROXY_HOST_IP,
                                     config.SOCKS5_PROXY_PORT)
             socket.socket = socks.socksocket
             address = (config.TEST_SERVER_HOST,
-                       config.TEST_SERVER_EXTRA_PORT)
+                       config.TEST_SERVER_PORT)
             url = 'http://%s:%d/' % address 
             res = urllib2.urlopen(url)
             resp_body = res.read()
-            wait_event.set()
-            request = server_queue.get(block=True, timeout=1)
             self.assertEqual(200, res.getcode())
             self.assertEqual(b'zzz', resp_body)
 
-            self.assertTrue(request['headers']['user-agent']
-                                .startswith('Python-urllib'))
+            self.assertTrue(self.test_server
+                            .request['headers']['user-agent']
+                            .startswith('Python-urllib'))
             self.assertEqual('%s:%d' % address,
-                             request['headers']['host'])
+                             self.test_server.request['headers']['host'])
         finally:
             socket.socket = original_socket
 
