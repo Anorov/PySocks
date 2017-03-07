@@ -720,7 +720,7 @@ class socksocket(_BaseSocket):
             # Probably IPv6, not supported -- raise an error, and hope
             # Happy Eyeballs (RFC6555) makes sure at least the IPv4
             # connection works...
-            raise socket.error("PySocks doesn't support IPv6")
+            raise socket.error("PySocks doesn't support IPv6: %s" % str(dest_pair))
 
         dest_addr, dest_port = dest_pair
 
