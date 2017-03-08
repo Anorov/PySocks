@@ -60,6 +60,7 @@ from io import BytesIO
 from os import SEEK_CUR
 import os
 import sys
+import logging
 from collections import Callable
 from base64 import b64encode
 
@@ -69,6 +70,8 @@ if os.name == "nt" and sys.version_info < (3, 0):
         import win_inet_pton
     except ImportError:
         raise ImportError("To run PySocks on Windows you must install win_inet_pton")
+
+log = logging.getLogger(__name__)
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
 PROXY_TYPE_SOCKS5 = SOCKS5 = 2
@@ -773,6 +776,7 @@ class socksocket(_BaseSocket):
 
             msg = "Error connecting to {0} proxy {1}".format(printable_type,
                                                            proxy_server)
+            log.debug("%s due to: %s", msg, error)
             raise ProxyConnectionError(msg, error)
 
         else:
