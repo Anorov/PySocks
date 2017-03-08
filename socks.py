@@ -102,19 +102,28 @@ def set_self_blocking(function):
                 self.setblocking(False)
     return wrapper
 
+
 class ProxyError(IOError):
     """
     socket_err contains original socket.error exception.
     """
     def __init__(self, msg, socket_err=None):
-        self.msg = msg
-        self.socket_err = socket_err
+        super(ProxyError, self).__init__(msg, socket_err)
 
-        if socket_err:
-            self.msg += ": {0}".format(socket_err)
+    @property
+    def msg(self):
+        return self.args[0]
+
+    @property
+    def socket_err(self):
+        return self.args[1]
 
     def __str__(self):
+        socket_err = self.socket_err
+        if socket_err:
+            return "%s due to: %s(%s)" % (self.msg, type(socket_err).__name__, socket_err)
         return self.msg
+
 
 class GeneralProxyError(ProxyError): pass
 class ProxyConnectionError(ProxyError): pass
@@ -730,7 +739,7 @@ class socksocket(_BaseSocket):
                            HTTP: _negotiate_HTTP
                          }
 
-    def _prepare_error_msg(self, proxy_addr, action, error):
+    def _prepare_error_msg(self, proxy_addr, action):
         proxy_type = self.proxy[0]
         try:
             proxy_addr, proxy_port = proxy_addr
@@ -739,9 +748,7 @@ class socksocket(_BaseSocket):
             proxy_server = proxy_addr
         printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
-        msg = "Failed %s to %s-proxy(%s) due to: %s: %s" % (
-            action, printable_type, proxy_server,
-            type(error).__name__, error)
+        msg = "failed %s to %s-proxy(%s)" % (action, printable_type, proxy_server)
 
         return msg
 
@@ -809,8 +816,8 @@ class socksocket(_BaseSocket):
             proxy_server = "{0}:{1}".format(proxy_addr, proxy_port)
             printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
-            msg = self._prepare_error_msg(proxy_addr, 'connecting', error)
-            log.warning(msg)
+            msg = self._prepare_error_msg(proxy_addr, 'connecting')
+            log.warning('%s due to: %s', msg, error)
             raise ProxyConnectionError(msg, error)
 
         else:
@@ -822,14 +829,14 @@ class socksocket(_BaseSocket):
             except socket.error as error:
                 # Wrap socket errors
                 self.close()
-                msg = self._prepare_error_msg(proxy_addr, 'negotiating', error)
-                log.warning(msg)
+                msg = self._prepare_error_msg(proxy_addr, 'negotiating')
+                log.warning('%s due to: %s', msg, error)
                 raise GeneralProxyError(msg, error)
             except ProxyError as error:
                 # Protocol error while negotiating with proxy
                 self.close()
-                msg = self._prepare_error_msg(proxy_addr, 'negotiating', error)
-                log.warning(msg)
+                msg = self._prepare_error_msg(proxy_addr, 'negotiating')
+                log.warning('%s due to: %s', msg, error)
                 raise
 
     def _proxy_addr(self):
