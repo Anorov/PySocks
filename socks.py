@@ -61,6 +61,7 @@ from os import SEEK_CUR
 import os
 import sys
 import functools
+import logging
 from collections import Callable
 from base64 import b64encode
 
@@ -70,6 +71,8 @@ if os.name == "nt" and sys.version_info < (3, 0):
         import win_inet_pton
     except ImportError:
         raise ImportError("To run PySocks on Windows you must install win_inet_pton")
+
+log = logging.getLogger(__name__)
 
 PROXY_TYPE_SOCKS4 = SOCKS4 = 1
 PROXY_TYPE_SOCKS5 = SOCKS5 = 2
@@ -740,7 +743,7 @@ class socksocket(_BaseSocket):
             # Probably IPv6, not supported -- raise an error, and hope
             # Happy Eyeballs (RFC6555) makes sure at least the IPv4
             # connection works...
-            raise socket.error("PySocks doesn't support IPv6")
+            raise socket.error("PySocks doesn't support IPv6: %s" % str(dest_pair))
 
         dest_addr, dest_port = dest_pair
 
@@ -793,6 +796,7 @@ class socksocket(_BaseSocket):
 
             msg = "Error connecting to {0} proxy {1}".format(printable_type,
                                                            proxy_server)
+            log.debug("%s due to: %s", msg, error)
             raise ProxyConnectionError(msg, error)
 
         else:
