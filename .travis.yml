@@ -13,7 +13,11 @@ env:
 # For python3.5 and python3.6 the base python versions
 # should be 3.5 and 3.6 accordingly to avoid InterpreterNotFound error
 matrix:
+  allow_failures:
+    - env: TOX_ENV=qa
   include:
+    - python: 3.4
+      env: TOX_ENV=qa
     - python: 3.5
       env: TOX_ENV=py35
     - python: 3.6

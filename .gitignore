@@ -27,3 +27,5 @@ setup.cfg
 MANIFEST
 /.tox/
 /3proxy.conf
+/.cache/
+/.env/
