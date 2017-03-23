@@ -154,7 +154,10 @@ def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username
                                 username.encode() if username else None,
                                 password.encode() if password else None)
 
-setdefaultproxy = set_default_proxy
+def setdefaultproxy(*args, **kwargs):
+    if 'proxytype' in kwargs:
+        kwargs['proxy_type'] = kwargs.pop('proxytype')
+    return set_default_proxy(*args, **kwargs)
 
 def get_default_proxy():
     """
@@ -344,7 +347,10 @@ class socksocket(_BaseSocket):
                       username.encode() if username else None,
                       password.encode() if password else None)
 
-    setproxy = set_proxy
+    def setproxy(self, *args, **kwargs):
+        if 'proxytype' in kwargs:
+            kwargs['proxy_type'] = kwargs.pop('proxytype')
+        return self.set_proxy(*args, **kwargs)
 
     def bind(self, *pos, **kw):
         """
