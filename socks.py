@@ -51,7 +51,7 @@ Modifications made by Anorov (https://github.com/Anorov)
 -Various small bug fixes
 """
 
-__version__ = "1.6.6"
+__version__ = "1.6.7"
 
 import socket
 import struct
