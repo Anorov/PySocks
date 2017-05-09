@@ -22,7 +22,7 @@ INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA
 OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
-OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMANGE.
+OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 This module provides a standard socket-like interface for Python
@@ -53,17 +53,17 @@ Modifications made by Anorov (https://github.com/Anorov)
 
 __version__ = "1.6.7"
 
+from base64 import b64encode
+from collections import Callable
+from errno import EOPNOTSUPP, EINVAL, EAGAIN
+import functools
+from io import BytesIO
+import logging
+import os
+from os import SEEK_CUR
 import socket
 import struct
-from errno import EOPNOTSUPP, EINVAL, EAGAIN
-from io import BytesIO
-from os import SEEK_CUR
-import os
 import sys
-import functools
-import logging
-from collections import Callable
-from base64 import b64encode
 
 
 if os.name == "nt" and sys.version_info < (3, 0):
@@ -97,7 +97,7 @@ def set_self_blocking(function):
         except Exception as e:
             raise
         finally:
-            # set orgin blcoking
+            # set orgin blocking
             if _is_blocking == 0:
                 self.setblocking(False)
     return wrapper
@@ -123,25 +123,24 @@ class SOCKS5Error(ProxyError): pass
 class SOCKS4Error(ProxyError): pass
 class HTTPError(ProxyError): pass
 
-SOCKS4_ERRORS = { 0x5B: "Request rejected or failed",
-                  0x5C: "Request rejected because SOCKS server cannot connect to identd on the client",
-                  0x5D: "Request rejected because the client program and identd report different user-ids"
-                }
+SOCKS4_ERRORS = {
+    0x5B: "Request rejected or failed",
+    0x5C: "Request rejected because SOCKS server cannot connect to identd on the client",
+    0x5D: "Request rejected because the client program and identd report different user-ids"
+}
 
-SOCKS5_ERRORS = { 0x01: "General SOCKS server failure",
-                  0x02: "Connection not allowed by ruleset",
-                  0x03: "Network unreachable",
-                  0x04: "Host unreachable",
-                  0x05: "Connection refused",
-                  0x06: "TTL expired",
-                  0x07: "Command not supported, or protocol error",
-                  0x08: "Address type not supported"
-                }
+SOCKS5_ERRORS = {
+    0x01: "General SOCKS server failure",
+    0x02: "Connection not allowed by ruleset",
+    0x03: "Network unreachable",
+    0x04: "Host unreachable",
+    0x05: "Connection refused",
+    0x06: "TTL expired",
+    0x07: "Command not supported, or protocol error",
+    0x08: "Address type not supported"
+}
 
-DEFAULT_PORTS = { SOCKS4: 1080,
-                  SOCKS5: 1080,
-                  HTTP: 8080
-                }
+DEFAULT_PORTS = {SOCKS4: 1080, SOCKS5: 1080, HTTP: 8080}
 
 def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username=None, password=None):
     """
