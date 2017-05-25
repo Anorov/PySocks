@@ -154,8 +154,8 @@ def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True, username
                                 password.encode() if password else None)
 
 def setdefaultproxy(*args, **kwargs):
-    if 'proxytype' in kwargs:
-        kwargs['proxy_type'] = kwargs.pop('proxytype')
+    if "proxytype" in kwargs:
+        kwargs["proxy_type"] = kwargs.pop("proxytype")
     return set_default_proxy(*args, **kwargs)
 
 def get_default_proxy():
@@ -198,10 +198,10 @@ def create_connection(dest_pair, proxy_type=None, proxy_addr=None,
     """
     # Remove IPv6 brackets on the remote address and proxy address.
     remote_host, remote_port = dest_pair
-    if remote_host.startswith('['):
-        remote_host = remote_host.strip('[]')
-    if proxy_addr and proxy_addr.startswith('['):
-        proxy_addr = proxy_addr.strip('[]')
+    if remote_host.startswith("["):
+        remote_host = remote_host.strip("[]")
+    if proxy_addr and proxy_addr.startswith("["):
+        proxy_addr = proxy_addr.strip("[]")
 
     err = None
 
@@ -347,8 +347,8 @@ class socksocket(_BaseSocket):
                       password.encode() if password else None)
 
     def setproxy(self, *args, **kwargs):
-        if 'proxytype' in kwargs:
-            kwargs['proxy_type'] = kwargs.pop('proxytype')
+        if "proxytype" in kwargs:
+            kwargs["proxy_type"] = kwargs.pop("proxytype")
         return self.set_proxy(*args, **kwargs)
 
     def bind(self, *pos, **kw):
@@ -584,7 +584,7 @@ class socksocket(_BaseSocket):
         # Well it's not an IP number, so it's probably a DNS name.
         if rdns:
             # Resolve remotely
-            host_bytes = host.encode('idna')
+            host_bytes = host.encode("idna")
             file.write(b"\x03" + chr(len(host_bytes)).encode() + host_bytes)
         else:
             # Resolve locally
@@ -650,7 +650,7 @@ class socksocket(_BaseSocket):
             # NOTE: This is actually an extension to the SOCKS4 protocol
             # called SOCKS4A and may not be supported in all cases.
             if remote_resolve:
-                writer.write(dest_addr.encode('idna') + b"\x00")
+                writer.write(dest_addr.encode("idna") + b"\x00")
             writer.flush()
 
             # Get the response from the server
@@ -686,8 +686,8 @@ class socksocket(_BaseSocket):
         addr = dest_addr if rdns else socket.gethostbyname(dest_addr)
 
         http_headers = [
-            b"CONNECT " + addr.encode('idna') + b":" + str(dest_port).encode() + b" HTTP/1.1",
-            b"Host: " + dest_addr.encode('idna')
+            b"CONNECT " + addr.encode("idna") + b":" + str(dest_port).encode() + b" HTTP/1.1",
+            b"Host: " + dest_addr.encode("idna")
         ]
 
         if username and password:
