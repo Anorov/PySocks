@@ -254,7 +254,7 @@ class _BaseSocket(socket.socket):
 
 def _makemethod(name):
     return lambda self, *pos, **kw: self._savedmethods[name](*pos, **kw)
-for name in ("sendto", "send", "recvfrom", "recv"):
+for name in ("sendto", "send", "recvfrom", "recv", "settimeout"):
     method = getattr(_BaseSocket, name, None)
 
     # Determine if the method is not defined the usual way
