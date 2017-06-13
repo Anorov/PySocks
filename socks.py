@@ -278,7 +278,7 @@ class _BaseSocket(socket.socket):
 
 def _makemethod(name):
     return lambda self, *pos, **kw: self._savedmethods[name](*pos, **kw)
-for name in ("sendto", "send", "recvfrom", "recv"):
+for name in ("sendto", "send", "recvfrom", "recv", "settimeout"):
     method = getattr(_BaseSocket, name, None)
 
     # Determine if the method is not defined the usual way
@@ -336,7 +336,7 @@ class socksocket(_BaseSocket):
         try:
             # test if we're connected, if so apply timeout
             peer = self.get_proxy_peername()
-            super(socksocket, self).settimeout(self._timeout)
+            self.settimeout(self._timeout)
         except socket.error:
             pass
 
@@ -409,7 +409,7 @@ class socksocket(_BaseSocket):
         host, _ = proxy
         _, port = relay
         super(socksocket, self).connect((host, port))
-        super(socksocket, self).settimeout(self._timeout)
+        self.settimeout(self._timeout)
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
 
     def sendto(self, bytes, *args, **kwargs):
@@ -579,7 +579,7 @@ class socksocket(_BaseSocket):
             # Get the bound address/port
             bnd = self._read_SOCKS5_address(reader)
 
-            super(socksocket, self).settimeout(self._timeout)
+            self.settimeout(self._timeout)
             return (resolved, bnd)
         finally:
             reader.close()
@@ -815,12 +815,12 @@ class socksocket(_BaseSocket):
 
         # We set the timeout here so that we don't hang in connection or during
         # negotiation.
-        super(socksocket, self).settimeout(self._timeout)
+        self.settimeout(self._timeout)
 
         if proxy_type is None:
             # Treat like regular socket object
             self.proxy_peername = dest_pair
-            super(socksocket, self).settimeout(self._timeout)
+            self.settimeout(self._timeout)
             super(socksocket, self).connect((dest_addr, dest_port))
             return
 
