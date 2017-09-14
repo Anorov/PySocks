@@ -1,7 +1,14 @@
 #!/usr/bin/env python
+import os
+import sys
 from setuptools import setup
 
 VERSION = "1.6.7"
+
+requirements = []
+if os.name == "nt" and sys.version_info < (3, 0):
+    # Required due to missing socket.inet_ntop & socket.inet_pton method in Windows Python 2.x
+    requirements.append("win-inet-pton")
 
 setup(
     name = "PySocks",
@@ -12,5 +19,6 @@ setup(
     author = "Anorov",
     author_email = "anorov.vorona@gmail.com",
     keywords = ["socks", "proxy"],
-    py_modules=["socks", "sockshandler"]
+    py_modules=["socks", "sockshandler"],
+    install_requires=requirements
 )
