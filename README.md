@@ -66,9 +66,10 @@ To monkeypatch the entire standard library with a single default proxy:
     import urllib2
     import socket
     import socks
+    import sys
 
     socks.set_default_proxy(socks.SOCKS5, "localhost")
-    socket.socket = socks.socksocket
+    socks.wrap_module(sys.modules[__name__])
 
     urllib2.urlopen("http://www.somesite.com/") # All requests will pass through the SOCKS proxy
 
