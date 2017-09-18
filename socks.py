@@ -477,7 +477,7 @@ class socksocket(_BaseSocket):
         """
         Returns the IP and port number of the proxy.
         """
-        return super(socksocket, self).getpeername()
+        return self.getpeername()
 
     getproxypeername = get_proxy_peername
 
