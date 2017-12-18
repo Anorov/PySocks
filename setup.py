@@ -20,5 +20,10 @@ setup(
     author_email = "anorov.vorona@gmail.com",
     keywords = ["socks", "proxy"],
     py_modules=["socks", "sockshandler"],
-    install_requires=requirements
+    install_requires=requirements,
+    classifiers=(
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+    )
 )
