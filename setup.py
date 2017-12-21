@@ -3,7 +3,7 @@ import os
 import sys
 from setuptools import setup
 
-VERSION = "1.6.7"
+VERSION = "1.6.8"
 
 requirements = []
 if os.name == "nt" and sys.version_info < (3, 0):
