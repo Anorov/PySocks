@@ -871,6 +871,7 @@ class socksocket(_BaseSocket):
         """
         try:
                 self.connect(dest_pair, catch_errors=True)
+                return 0
         except OSError as e:
                 if e.errno: #If the error is numeric (socket errors are numeric), then return number as connect_ex expects. Otherwise raise the error again (socket timeout for example)
                         return e.errno
