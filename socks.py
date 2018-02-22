@@ -835,30 +835,30 @@ class socksocket(_BaseSocket):
             # Error while connecting to proxy
             self.close()
             if not catch_errors:
-                    proxy_addr, proxy_port = proxy_addr
-                    proxy_server = "{0}:{1}".format(proxy_addr, proxy_port)
-                    printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
+                proxy_addr, proxy_port = proxy_addr
+                proxy_server = "{0}:{1}".format(proxy_addr, proxy_port)
+                printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
-                    msg = "Error connecting to {0} proxy {1}".format(printable_type,
-                                                                     proxy_server)
-                    log.debug("%s due to: %s", msg, error)
-                    raise ProxyConnectionError(msg, error)
+                msg = "Error connecting to {0} proxy {1}".format(printable_type,
+                                                                    proxy_server)
+                log.debug("%s due to: %s", msg, error)
+                raise ProxyConnectionError(msg, error)
             else:
-                    raise error
+                raise error
 
         else:
             # Connected to proxy server, now negotiate
             try:
                 # Calls negotiate_{SOCKS4, SOCKS5, HTTP}
-                    negotiate = self._proxy_negotiators[proxy_type]
-                    negotiate(self, dest_addr, dest_port)
+                negotiate = self._proxy_negotiators[proxy_type]
+                negotiate(self, dest_addr, dest_port)
             except socket.error as error:
-                    if not catch_errors:
-                        # Wrap socket errors
-                        self.close()
-                        raise GeneralProxyError("Socket error", error)
-                    else:
-                        raise error
+                if not catch_errors:
+                    # Wrap socket errors
+                    self.close()
+                    raise GeneralProxyError("Socket error", error)
+                else:
+                    raise error
             except ProxyError:
                 # Protocol error while negotiating with proxy
                 self.close()
@@ -867,16 +867,18 @@ class socksocket(_BaseSocket):
     @set_self_blocking
     def connect_ex(self, dest_pair):
         """ https://docs.python.org/3/library/socket.html#socket.socket.connect_ex
-        Like connect(address), but return an error indicator instead of raising an exception for errors returned by the C-level connect() call (other problems, such as “host not found,” can still raise exceptions).
+        Like connect(address), but return an error indicator instead of raising an exception for errors returned by the C-level connect() call (other problems, such as "host not found" can still raise exceptions).
         """
         try:
-                self.connect(dest_pair, catch_errors=True)
-                return 0
+            self.connect(dest_pair, catch_errors=True)
+            return 0
         except OSError as e:
-                if e.errno: #If the error is numeric (socket errors are numeric), then return number as connect_ex expects. Otherwise raise the error again (socket timeout for example)
-                        return e.errno
-                else:
-                        raise
+            # If the error is numeric (socket errors are numeric), then return number as 
+            # connect_ex expects. Otherwise raise the error again (socket timeout for example)
+            if e.errno:
+                return e.errno
+            else:
+                raise
 
     def _proxy_addr(self):
         """
