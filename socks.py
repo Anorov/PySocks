@@ -533,6 +533,14 @@ class socksocket(_BaseSocket):
             if chosen_auth[1:2] == b"\x02":
                 # Okay, we need to perform a basic username/password
                 # authentication.
+                if not (username and password):
+                    # Although we said we don't support authentication, the
+                    # server may still request basic username/password
+                    # authentication
+                    raise SOCKS5AuthError("No username/password supplied. "
+                                          "Server requested username/password"
+                                          " authentication")
+
                 writer.write(b"\x01" + chr(len(username)).encode()
                              + username
                              + chr(len(password)).encode()
