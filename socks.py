@@ -55,7 +55,10 @@ Modifications made by Anorov (https://github.com/Anorov)
 """
 
 from base64 import b64encode
-from collections import Callable
+try:
+    from collections.abc import Callable
+except ImportError:
+    from collections import Callable
 from errno import EOPNOTSUPP, EINVAL, EAGAIN
 import functools
 from io import BytesIO
