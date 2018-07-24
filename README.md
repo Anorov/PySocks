@@ -15,7 +15,7 @@ I no longer have the time to actively work on this project. I will gladly accept
 Features
 ========
 
-* SOCKS proxy client for Python 2.6 - 3.x
+* SOCKS proxy client for Python 2.7 and 3.4+
 * TCP and UDP both supported
 * HTTP proxy client included but not supported or recommended (you should use urllib2's or requests' own HTTP proxy interface)
 * urllib2 handler included. `pip install` / `setup.py install` will automatically install the `sockshandler` module.
