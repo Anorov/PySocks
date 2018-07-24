@@ -10,10 +10,15 @@ if os.name == "nt" and sys.version_info < (3, 0):
     # Required due to missing socket.inet_ntop & socket.inet_pton method in Windows Python 2.x
     requirements.append("win-inet-pton")
 
+with open('README.md') as f:
+    long_description = f.read()
+
 setup(
     name = "PySocks",
     version = VERSION,
     description = "A Python SOCKS client module. See https://github.com/Anorov/PySocks for more information.",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     url = "https://github.com/Anorov/PySocks",
     license = "BSD",
     author = "Anorov",
