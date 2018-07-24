@@ -114,7 +114,7 @@ class ProxyError(IOError):
         self.socket_err = socket_err
 
         if socket_err:
-            self.msg += ": {0}".format(socket_err)
+            self.msg += ": {}".format(socket_err)
 
     def __str__(self):
         return self.msg
@@ -583,7 +583,7 @@ class socksocket(_BaseSocket):
             if status != 0x00:
                 # Connection failed: server returned an error
                 error = SOCKS5_ERRORS.get(status, "Unknown error")
-                raise SOCKS5Error("{0:#04x}: {1}".format(status, error))
+                raise SOCKS5Error("{:#04x}: {}".format(status, error))
 
             # Get the bound address/port
             bnd = self._read_SOCKS5_address(reader)
@@ -701,7 +701,7 @@ class socksocket(_BaseSocket):
             if status != 0x5A:
                 # Connection failed: server returned an error
                 error = SOCKS4_ERRORS.get(status, "Unknown error")
-                raise SOCKS4Error("{0:#04x}: {1}".format(status, error))
+                raise SOCKS4Error("{:#04x}: {}".format(status, error))
 
             # Get the bound address/port
             self.proxy_sockname = (socket.inet_ntoa(resp[4:]),
@@ -761,7 +761,7 @@ class socksocket(_BaseSocket):
                 "HTTP proxy server did not return a valid HTTP status")
 
         if status_code != 200:
-            error = "{0}: {1}".format(status_code, status_msg)
+            error = "{}: {}".format(status_code, status_msg)
             if status_code in (400, 403, 405):
                 # It's likely that the HTTP proxy server does not support the
                 # CONNECT tunneling method
@@ -844,10 +844,10 @@ class socksocket(_BaseSocket):
             self.close()
             if not catch_errors:
                 proxy_addr, proxy_port = proxy_addr
-                proxy_server = "{0}:{1}".format(proxy_addr, proxy_port)
+                proxy_server = "{}:{}".format(proxy_addr, proxy_port)
                 printable_type = PRINTABLE_PROXY_TYPES[proxy_type]
 
-                msg = "Error connecting to {0} proxy {1}".format(printable_type,
+                msg = "Error connecting to {} proxy {}".format(printable_type,
                                                                     proxy_server)
                 log.debug("%s due to: %s", msg, error)
                 raise ProxyConnectionError(msg, error)
