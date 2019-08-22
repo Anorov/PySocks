@@ -33,7 +33,7 @@ PROXY_TYPES = {"SOCKS4": SOCKS4, "SOCKS5": SOCKS5, "HTTP": HTTP}
 PRINTABLE_PROXY_TYPES = dict(zip(PROXY_TYPES.values(), PROXY_TYPES.keys()))
 
 _orgsocket = _orig_socket = socket.socket
-
+_orig_getaddrinfo = socket.getaddrinfo
 
 def set_self_blocking(function):
 
@@ -135,6 +135,15 @@ def get_default_proxy():
 
 getdefaultproxy = get_default_proxy
 
+# https://web.archive.org/web/20161211104525/http://fitblip.pub/2012/11/13/proxying-dns-with-python/
+def getaddrinfo(*args):
+    (proxy_type, proxy_addr, proxy_port, rdns, username,
+         password) = get_default_proxy()
+
+    if proxy_type is not None and rdns:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (args[0], args[1]))]
+
+    return _orig_getaddrinfo(*args)
 
 def wrap_module(module):
     """Attempts to replace a module's socket library with a SOCKS socket.
@@ -143,6 +152,7 @@ def wrap_module(module):
     only work on modules that import socket directly into the namespace;
     most of the Python Standard Library falls into this category."""
     if socksocket.default_proxy:
+        module.socket.getaddrinfo = getaddrinfo
         module.socket.socket = socksocket
     else:
         raise GeneralProxyError("No default proxy specified")
