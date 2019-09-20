@@ -59,10 +59,10 @@ s.set_proxy(socks.SOCKS4, "localhost", 4444)
 # Or
 s.set_proxy(socks.HTTP, "5.5.5.5", 8888)
 
-# Can be treated identical to a regular socket object
+# Can be treated like a regular socket object
 s.connect(("www.somesite.com", 80))
 s.sendall("GET / HTTP/1.1 ...")
-print s.recv(4096)
+print(s.recv(4096))
 ```
 
 ## Monkeypatching ##
