@@ -199,7 +199,7 @@ def create_connection(dest_pair,
             sock.connect((remote_host, remote_port))
             return sock
 
-        except (socket.error, ProxyConnectionError) as e:
+        except (socket.error, ProxyError) as e:
             err = e
             if sock:
                 sock.close()
