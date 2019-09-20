@@ -14,7 +14,7 @@ Features
 * TCP supported
 * UDP mostly supported (issues may occur in some edge cases)
 * HTTP proxy client included but not supported or recommended (you should use urllib2's or requests' own HTTP proxy interface)
-* urllib2 handler included. `pip install` / `setup.py install` will automatically install the `sockshandler` module.
+* urllib2 handler included, but not supported. `pip install` / `setup.py install` will automatically install the `sockshandler` module.
 
 Installation
 ============
@@ -29,9 +29,18 @@ These will install both the `socks` and `sockshandler` modules.
 
 Alternatively, include just `socks.py` in your project.
 
---------------------------------------------
+Proxying HTTP Traffic
+=====================
 
-*Warning:* PySocks/SocksiPy only supports HTTP proxies that use CONNECT tunneling. Certain HTTP proxies may not work with this library. If you wish to use HTTP (not SOCKS) proxies, it is recommended that you rely on your HTTP client's native proxy support (`proxies` dict for `requests`, or `urllib2.ProxyHandler` for `urllib2`) instead.
+We highly recommend using the [requests](https://2.python-requests.org/en/master/) library for proxying HTTP traffic with SOCKS or HTTP proxies. It uses PySocks under the hood.
+
+```python
+requests.get(url, proxies={"http": "socks5://proxyhostname:9050", "https": "socks5://proxyhostname:9050"})`
+```
+
+PySocks has an option for HTTP proxies, but it only supports CONNECT-based HTTP proxies, and in general we recommend using your HTTP client's native proxy support (such as requests' `proxies` keyword argument) rather than PySocks'.
+
+If you absolutely must, you can use the urllib2 handler in sockshandler.py, but it's not supported (and won't work for non-CONNECT-based HTTP proxies, as stated above).
 
 --------------------------------------------
 
@@ -69,17 +78,6 @@ To monkeypatch the entire standard library with a single default proxy:
     urllib2.urlopen("http://www.somesite.com/") # All requests will pass through the SOCKS proxy
 
 Note that monkeypatching may not work for all standard modules or for all third party modules, and generally isn't recommended. Monkeypatching is usually an anti-pattern in Python.
-
-## urllib2 Handler ##
-
-Example use case with the `sockshandler` urllib2 handler. Note that you must import both `socks` and `sockshandler`, as the handler is its own module separate from PySocks. The module is included in the PyPI package.
-
-    import urllib2
-    import socks
-    from sockshandler import SocksiPyHandler
-
-    opener = urllib2.build_opener(SocksiPyHandler(socks.SOCKS5, "127.0.0.1", 9050))
-    print opener.open("http://www.somesite.com/") # All requests made by the opener will pass through the SOCKS proxy
 
 --------------------------------------------
 
