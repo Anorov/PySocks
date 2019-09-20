@@ -1,7 +1,7 @@
 PySocks
 =======
 
-PySocks lets you send traffic through SOCKS and HTTP proxy servers. It is a modern fork of [SocksiPy](http://socksipy.sourceforge.net/) with bug fixes and extra features.
+PySocks lets you send traffic through SOCKS proxy servers. It is a modern fork of [SocksiPy](http://socksipy.sourceforge.net/) with bug fixes and extra features.
 
 Acts as a drop-in replacement to the socket module. Seamlessly configure SOCKS proxies for any socket object by calling `socket_object.set_proxy()`.
 
@@ -11,9 +11,8 @@ Features
 ========
 
 * SOCKS proxy client for Python 2.7 and 3.4+
-* TCP supported
-* UDP mostly supported (issues may occur in some edge cases)
-* HTTP proxy client included but not supported or recommended (you should use urllib2's or requests' own HTTP proxy interface)
+* TCP supported, UDP mostly supported (issues may occur in some edge cases)
+* HTTP proxy client included but not supported or recommended (you should use requests', or your HTTP client's, own HTTP proxy interface)
 * urllib2 handler included, but not supported. `pip install` / `setup.py install` will automatically install the `sockshandler` module.
 
 Installation
