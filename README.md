@@ -34,7 +34,7 @@ Proxying HTTP Traffic
 We highly recommend using the [requests](https://2.python-requests.org/en/master/) library for proxying HTTP traffic with SOCKS or HTTP proxies. It uses PySocks under the hood.
 
 ```python
-requests.get(url, proxies={"http": "socks5://proxyhostname:9050", "https": "socks5://proxyhostname:9050"})`
+requests.get(url, proxies={"http": "socks5://proxyhostname:9050", "https": "socks5://proxyhostname:9050"})
 ```
 
 PySocks has an option for HTTP proxies, but it only supports CONNECT-based HTTP proxies, and in general we recommend using your HTTP client's native proxy support (such as requests' `proxies` keyword argument) rather than PySocks'.
