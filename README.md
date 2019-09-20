@@ -19,7 +19,7 @@ Features
 Installation
 ============
 
-    pip install PySocks
+    pip install pysocks
 
 Or download the tarball / `git clone` and...
 
