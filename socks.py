@@ -329,7 +329,7 @@ class socksocket(_BaseSocket):
         Happens during the bind() phase."""
         (proxy_type, proxy_addr, proxy_port, rdns, username,
          password) = self.proxy
-        if not proxy_type or self.type != socket.SOCK_DGRAM:
+        if not proxy_type or self.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) != socket.SOCK_DGRAM:
             return _orig_socket.bind(self, *pos, **kw)
 
         if self._proxyconn:
@@ -361,7 +361,7 @@ class socksocket(_BaseSocket):
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
 
     def sendto(self, bytes, *args, **kwargs):
-        if self.type != socket.SOCK_DGRAM:
+        if self.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) != socket.SOCK_DGRAM:
             return super(socksocket, self).sendto(bytes, *args, **kwargs)
         if not self._proxyconn:
             self.bind(("", 0))
@@ -381,13 +381,13 @@ class socksocket(_BaseSocket):
         return sent - header.tell()
 
     def send(self, bytes, flags=0, **kwargs):
-        if self.type == socket.SOCK_DGRAM:
+        if self.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) == socket.SOCK_DGRAM:
             return self.sendto(bytes, flags, self.proxy_peername, **kwargs)
         else:
             return super(socksocket, self).send(bytes, flags, **kwargs)
 
     def recvfrom(self, bufsize, flags=0):
-        if self.type != socket.SOCK_DGRAM:
+        if self.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) != socket.SOCK_DGRAM:
             return super(socksocket, self).recvfrom(bufsize, flags)
         if not self._proxyconn:
             self.bind(("", 0))
@@ -744,7 +744,7 @@ class socksocket(_BaseSocket):
 
         dest_addr, dest_port = dest_pair
 
-        if self.type == socket.SOCK_DGRAM:
+        if self.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE) == socket.SOCK_DGRAM:
             if not self._proxyconn:
                 self.bind(("", 0))
             dest_addr = socket.gethostbyname(dest_addr)
