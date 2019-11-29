@@ -85,7 +85,7 @@ class SocksiPyConnection(httplib.HTTPConnection):
         self.sock = sock
 
 class SocksiPyConnectionS(httplib.HTTPSConnection):
-    def __init__(self, host, proxytype, proxyaddr, proxyport=None, rdns=True, username=None, password=None, **kwargs):
+    def __init__(self, host, proxytype, proxyaddr, proxyport=None, rdns=None, username=None, password=None, **kwargs):
         self.proxyargs = proxytype, proxyaddr, proxyport, rdns, username, password
         httplib.HTTPSConnection.__init__(self, host, **kwargs)
 
