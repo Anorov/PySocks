@@ -37,8 +37,8 @@ def is_ip(s):
 socks4_no_rdns = set()
 
 class SocksiPyConnection(httplib.HTTPConnection):
-    def __init__(self, host, proxytype, proxyaddr, proxyport=None, rdns=None, username=None, password=None, **kwargs):
-        self.proxyargs = proxytype, proxyaddr, proxyport, rdns, username, password
+    def __init__(self, proxyargs, host, **kwargs):
+        self.proxyargs = proxyargs
         httplib.HTTPConnection.__init__(self, host, **kwargs)
 
     def connect(self):
@@ -57,8 +57,8 @@ class SocksiPyConnection(httplib.HTTPConnection):
         for i in range(try_num):
             try:
                 sock = socks.create_connection(
-                    (self.host, self.port), self.timeout, None,
-                    proxytype, proxyaddr, proxyport, rdns, username, password)
+                        (self.host, self.port), self.timeout, None,
+                        proxytype, proxyaddr, proxyport, rdns, username, password)
                 break
             except socks.SOCKS4Error as e:
                 ex = e
@@ -85,8 +85,8 @@ class SocksiPyConnection(httplib.HTTPConnection):
         self.sock = sock
 
 class SocksiPyConnectionS(httplib.HTTPSConnection):
-    def __init__(self, host, proxytype, proxyaddr, proxyport=None, rdns=None, username=None, password=None, **kwargs):
-        self.proxyargs = proxytype, proxyaddr, proxyport, rdns, username, password
+    def __init__(self, proxyargs, host, **kwargs):
+        self.proxyargs = proxyargs
         httplib.HTTPSConnection.__init__(self, host, **kwargs)
 
     def connect(self):
@@ -97,22 +97,22 @@ class SocksiPyConnectionS(httplib.HTTPSConnection):
         SocksiPyConnection.connect(self)
         self.sock = self._context.wrap_socket(self.sock, server_hostname=self.host)
 
-class SocksiPyHandler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
-    def __init__(self, *args, **kwargs):
-        debuglevel = kwargs.pop("debuglevel", 0)
-        self.args = args
+class SocksiPyHandler(urllib2.ProxyHandler, urllib2.HTTPHandler, urllib2.HTTPSHandler):
+    def __init__(self, proxytype, proxyaddr, proxyport=None, rdns=None,
+                       username=None, password=None, debuglevel=0, **kwargs):
+        self.proxyargs = proxytype, proxyaddr, proxyport, rdns, username, password
         self.kwargs = kwargs
         urllib2.HTTPSHandler.__init__(self, debuglevel=debuglevel)
 
     def http_open(self, req):
         def build(host, **kwargs):
-            conn = SocksiPyConnection(host, *self.args, **kwargs)
+            conn = SocksiPyConnection(self.proxyargs, host, **kwargs)
             return conn
         return self.do_open(build, req, **self.kwargs)
 
     def https_open(self, req):
         def build(host, **kwargs):
-            conn = SocksiPyConnectionS(host, *self.args, **kwargs)
+            conn = SocksiPyConnectionS(self.proxyargs, host, **kwargs)
             return conn
         return self.do_open(build, req, **self.kwargs)
 
