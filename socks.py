@@ -807,6 +807,10 @@ class socksocket(_BaseSocket):
                 # Calls negotiate_{SOCKS4, SOCKS5, HTTP}
                 negotiate = self._proxy_negotiators[proxy_type]
                 negotiate(self, dest_addr, dest_port)
+            except ProxyError:
+                # Protocol error while negotiating with proxy
+                self.close()
+                raise
             except socket.error as error:
                 if not catch_errors:
                     # Wrap socket errors
@@ -814,10 +818,6 @@ class socksocket(_BaseSocket):
                     raise GeneralProxyError("Socket error", error)
                 else:
                     raise error
-            except ProxyError:
-                # Protocol error while negotiating with proxy
-                self.close()
-                raise
                 
     @set_self_blocking
     def connect_ex(self, dest_pair):
