@@ -21,14 +21,9 @@ except ImportError: # Python 3
 import socks # $ pip install PySocks
 
 
-def is_ip(s):
+def is_ipv4(s):
     try:
-        if ':' in s:
-            socket.inet_pton(socket.AF_INET6, s)
-        elif '.' in s:
-            socket.inet_aton(s)
-        else:
-            return False
+        socket.inet_aton(s)
     except:
         return False
     else:
@@ -62,7 +57,7 @@ class SocksiPyConnection(httplib.HTTPConnection):
                 break
             except socks.SOCKS4Error as e:
                 ex = e
-                if rdns and e.msg[:4] == "0x5b" and not is_ip(self.host):
+                if rdns and e.msg[:4] == "0x5b" and not is_ipv4(self.host):
                     # Maybe a SOCKS4 server that doesn't support remote resolving
                     # Disable rdns and try again
                     rdns = False
