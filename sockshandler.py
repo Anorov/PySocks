@@ -19,19 +19,10 @@ except ImportError: # Python 3
 
 import socks # $ pip install PySocks
 
-def merge_dict(a, b):
-    d = a.copy()
-    d.update(b)
-    return d
 
-def is_ip(s):
+def is_ipv4(s):
     try:
-        if ':' in s:
-            socket.inet_pton(socket.AF_INET6, s)
-        elif '.' in s:
-            socket.inet_aton(s)
-        else:
-            return False
+        socket.inet_aton(s)
     except:
         return False
     else:
@@ -40,65 +31,65 @@ def is_ip(s):
 socks4_no_rdns = set()
 
 class SocksiPyConnection(httplib.HTTPConnection):
-    def __init__(self, proxytype, proxyaddr, proxyport=None, rdns=True, username=None, password=None, *args, **kwargs):
-        self.proxyargs = (proxytype, proxyaddr, proxyport, rdns, username, password)
-        httplib.HTTPConnection.__init__(self, *args, **kwargs)
+    def __init__(self, proxyargs, host, **kwargs):
+        self.proxyargs = proxyargs
+        httplib.HTTPConnection.__init__(self, host, **kwargs)
 
     def connect(self):
-        (proxytype, proxyaddr, proxyport, rdns, username, password) = self.proxyargs
-        rdns = rdns and proxyaddr not in socks4_no_rdns
+        proxytype, proxyaddr, proxyport, rdns, username, password = self.proxyargs
+        if rdns is None:
+            # SOCKS4 disable rdns by default
+            rdns = proxytype is not socks.SOCKS4
+        if rdns:
+            rdns = (proxyaddr, proxyport) not in socks4_no_rdns
+        
         while True:
             try:
-                sock = socks.create_connection(
-                    (self.host, self.port), self.timeout, None,
-                    proxytype, proxyaddr, proxyport, rdns, username, password,
-                    ((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),))
+                self.sock = socks.create_connection(
+                        (self.host, self.port), self.timeout, None,
+                        proxytype, proxyaddr, proxyport, rdns, username, password,
+                        ((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),))
                 break
             except socks.SOCKS4Error as e:
-                if rdns and "0x5b" in str(e) and not is_ip(self.host):
+                if rdns and e.msg[:4] == "0x5b" and not is_ipv4(self.host):
                     # Maybe a SOCKS4 server that doesn't support remote resolving
-                    # Let's try again
+                    # Disable rdns and try again
                     rdns = False
-                    socks4_no_rdns.add(proxyaddr)
+                    socks4_no_rdns.add((proxyaddr, proxyport))
                 else:
-                    raise
-        self.sock = sock
+                    raise e
 
 class SocksiPyConnectionS(httplib.HTTPSConnection):
-    def __init__(self, proxytype, proxyaddr, proxyport=None, rdns=True, username=None, password=None, *args, **kwargs):
-        self.proxyargs = (proxytype, proxyaddr, proxyport, rdns, username, password)
-        httplib.HTTPSConnection.__init__(self, *args, **kwargs)
+    def __init__(self, proxyargs, host, **kwargs):
+        self.proxyargs = proxyargs
+        httplib.HTTPSConnection.__init__(self, host, **kwargs)
 
     def connect(self):
+        # Attribute `_check_hostname` used in python 3.2 to 3.6
+        check_hostname = getattr(self, "_check_hostname", None)
+        if check_hostname:
+            self._context.check_hostname = check_hostname
         SocksiPyConnection.connect(self)
         self.sock = self._context.wrap_socket(self.sock, server_hostname=self.host)
-        if not self._context.check_hostname and self._check_hostname:
-            try:
-                ssl.match_hostname(self.sock.getpeercert(), self.host)
-            except Exception:
-                self.sock.shutdown(socket.SHUT_RDWR)
-                self.sock.close()
-                raise
 
-class SocksiPyHandler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kw = kwargs
-        urllib2.HTTPHandler.__init__(self)
+class SocksiPyHandler(urllib2.ProxyHandler, urllib2.HTTPHandler, urllib2.HTTPSHandler):
+    def __init__(self, proxytype, proxyaddr, proxyport=None, rdns=None,
+                       username=None, password=None, debuglevel=0, **kwargs):
+        self.proxyargs = proxytype, proxyaddr, proxyport, rdns, username, password
+        self.kwargs = kwargs
+        urllib2.HTTPSHandler.__init__(self, debuglevel=debuglevel)
 
     def http_open(self, req):
-        def build(host, port=None, timeout=0, **kwargs):
-            kw = merge_dict(self.kw, kwargs)
-            conn = SocksiPyConnection(*self.args, host=host, port=port, timeout=timeout, **kw)
+        def build(host, **kwargs):
+            conn = SocksiPyConnection(self.proxyargs, host, **kwargs)
             return conn
-        return self.do_open(build, req)
+        return self.do_open(build, req, **self.kwargs)
 
     def https_open(self, req):
-        def build(host, port=None, timeout=0, **kwargs):
-            kw = merge_dict(self.kw, kwargs)
-            conn = SocksiPyConnectionS(*self.args, host=host, port=port, timeout=timeout, **kw)
+        def build(host, **kwargs):
+            conn = SocksiPyConnectionS(self.proxyargs, host, **kwargs)
             return conn
-        return self.do_open(build, req)
+        return self.do_open(build, req, **self.kwargs)
 
 if __name__ == "__main__":
     import sys
