@@ -9,7 +9,6 @@ This module provides a Handler which you can use with urllib2 to allow it to tun
 """
 import socket
 import ssl
-import time
 
 try:
     import urllib2
@@ -43,20 +42,15 @@ class SocksiPyConnection(httplib.HTTPConnection):
             rdns = proxytype is not socks.SOCKS4
         if rdns:
             rdns = proxyaddr not in socks4_no_rdns
-
-        try_num = 3 if rdns and proxytype is socks.SOCKS4 else 2
-        rest = 3
-        ex = None
-        sock = None
         
-        for i in range(try_num):
+        while True:
             try:
                 sock = socks.create_connection(
                         (self.host, self.port), self.timeout, None,
-                        proxytype, proxyaddr, proxyport, rdns, username, password)
+                        proxytype, proxyaddr, proxyport, rdns, username, password,
+                        ((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),))
                 break
             except socks.SOCKS4Error as e:
-                ex = e
                 if rdns and e.msg[:4] == "0x5b" and not is_ipv4(self.host):
                     # Maybe a SOCKS4 server that doesn't support remote resolving
                     # Disable rdns and try again
@@ -64,19 +58,7 @@ class SocksiPyConnection(httplib.HTTPConnection):
                     socks4_no_rdns.add(proxyaddr)
                 else:
                     raise e
-            except socks.GeneralProxyError as e:
-                ex = e
-                if e.msg != "Connection closed unexpectedly":
-                    raise e
-            except socks.ProxyConnectionError as e:
-                ex = e
 
-            # Need a rest befor retry
-            if i + 1 < try_num:
-                time.sleep(rest)
-
-        if sock is None:
-            raise ex
         self.sock = sock
 
 class SocksiPyConnectionS(httplib.HTTPSConnection):
