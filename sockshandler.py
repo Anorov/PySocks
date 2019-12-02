@@ -41,11 +41,11 @@ class SocksiPyConnection(httplib.HTTPConnection):
             # SOCKS4 disable rdns by default
             rdns = proxytype is not socks.SOCKS4
         if rdns:
-            rdns = proxyaddr not in socks4_no_rdns
+            rdns = (proxyaddr, proxyport) not in socks4_no_rdns
         
         while True:
             try:
-                sock = socks.create_connection(
+                self.sock = socks.create_connection(
                         (self.host, self.port), self.timeout, None,
                         proxytype, proxyaddr, proxyport, rdns, username, password,
                         ((socket.IPPROTO_TCP, socket.TCP_NODELAY, 1),))
@@ -55,11 +55,9 @@ class SocksiPyConnection(httplib.HTTPConnection):
                     # Maybe a SOCKS4 server that doesn't support remote resolving
                     # Disable rdns and try again
                     rdns = False
-                    socks4_no_rdns.add(proxyaddr)
+                    socks4_no_rdns.add((proxyaddr, proxyport))
                 else:
                     raise e
-
-        self.sock = sock
 
 class SocksiPyConnectionS(httplib.HTTPSConnection):
     def __init__(self, proxyargs, host, **kwargs):
