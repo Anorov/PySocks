@@ -1,5 +1,5 @@
 six
-test_server==0.0.27
+test_server==0.0.31
 psutil
 pytest
 pylint
