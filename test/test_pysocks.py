@@ -79,8 +79,7 @@ class PySocksTestCase(TestCase):
         from test_server import TestServer
 
         cls.test_server = TestServer(address=TEST_SERVER_HOST,
-                                     port=TEST_SERVER_PORT,
-                                     engine='subprocess')
+                                     port=TEST_SERVER_PORT)
         cls.test_server.start()
 
     @classmethod
@@ -112,6 +111,7 @@ class PySocksTestCase(TestCase):
                          self.test_server.request['headers']['user-agent'])
         self.assertEqual('%s:%d' % address,
                          self.test_server.request['headers']['host'])
+        content = b'3\r\n' + content + b'\r\n0'
         self.assertEqual(content, resp_body)
         self.assertEqual(client_ip or PROXY_HOST_IP,
                          self.test_server.request['client_ip'])
