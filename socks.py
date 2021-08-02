@@ -253,7 +253,7 @@ class socksocket(_BaseSocket):
                  proto=0, *args, **kwargs):
         if type not in (socket.SOCK_STREAM, socket.SOCK_DGRAM):
             msg = "Socket type must be stream or datagram, not {!r}"
-            raise ValueError(msg.format(type))
+            raise socket.error(msg.format(type))
 
         super(socksocket, self).__init__(family, type, proto, *args, **kwargs)
         self._proxyconn = None  # TCP connection to keep UDP relay alive
