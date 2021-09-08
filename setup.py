@@ -25,7 +25,6 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Anorov/PySocks",
-    license="BSD",
     author="Anorov",
     author_email="anorov.vorona@gmail.com",
     keywords=["socks", "proxy"],
@@ -33,6 +32,7 @@ setup(
     install_requires=requirements,
     python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
     classifiers=(
+        "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
