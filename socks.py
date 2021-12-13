@@ -394,8 +394,8 @@ class socksocket(_BaseSocket):
 
         buf = BytesIO(super(socksocket, self).recv(bufsize + 1024, flags))
         buf.seek(2, SEEK_CUR)
-        frag = buf.read(1)
-        if ord(frag):
+        frag = struct.unpack(">B", buf.read(1))[0]
+        if frag:
             raise NotImplementedError("Received UDP packet fragment")
         fromhost, fromport = self._read_SOCKS5_address(buf)
 
@@ -488,9 +488,10 @@ class socksocket(_BaseSocket):
                                           "Server requested username/password"
                                           " authentication")
 
-                writer.write(b"\x01" + chr(len(username)).encode()
+                writer.write(b"\x01"
+                             + struct.pack(">B", len(username))
                              + username
-                             + chr(len(password)).encode()
+                             + struct.pack(">B", len(password))
                              + password)
                 writer.flush()
                 auth_status = self._readall(reader, 2)
@@ -526,7 +527,7 @@ class socksocket(_BaseSocket):
                 raise GeneralProxyError(
                     "SOCKS5 proxy server sent invalid data")
 
-            status = ord(resp[1:2])
+            status = struct.unpack(">B", resp[1:2])[0]
             if status != 0x00:
                 # Connection failed: server returned an error
                 error = SOCKS5_ERRORS.get(status, "Unknown error")
@@ -567,7 +568,7 @@ class socksocket(_BaseSocket):
         if rdns:
             # Resolve remotely
             host_bytes = host.encode("idna")
-            file.write(b"\x03" + chr(len(host_bytes)).encode() + host_bytes)
+            file.write(b"\x03" + struct.pack(">B", len(host_bytes)) + host_bytes)
         else:
             # Resolve locally
             addresses = socket.getaddrinfo(host, port, socket.AF_UNSPEC,
@@ -592,7 +593,7 @@ class socksocket(_BaseSocket):
             addr = socket.inet_ntoa(self._readall(file, 4))
         elif atyp == b"\x03":
             length = self._readall(file, 1)
-            addr = self._readall(file, ord(length))
+            addr = self._readall(file, struct.unpack(">B", length)[0])
         elif atyp == b"\x04":
             addr = socket.inet_ntop(socket.AF_INET6, self._readall(file, 16))
         else:
@@ -644,7 +645,7 @@ class socksocket(_BaseSocket):
                 raise GeneralProxyError(
                     "SOCKS4 proxy server sent invalid data")
 
-            status = ord(resp[1:2])
+            status = struct.unpack(">B", resp[1:2])[0]
             if status != 0x5A:
                 # Connection failed: server returned an error
                 error = SOCKS4_ERRORS.get(status, "Unknown error")
