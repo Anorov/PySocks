@@ -25,7 +25,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Anorov/PySocks",
-    license="BSD",
+    license="BSD-3-Clause",
     author="Anorov",
     author_email="anorov.vorona@gmail.com",
     keywords=["socks", "proxy"],
