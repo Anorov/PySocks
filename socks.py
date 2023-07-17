@@ -343,7 +343,7 @@ class socksocket(_BaseSocket):
         # some relays drop packets if a port of zero is specified.
         # Avoid specifying host address in case of NAT though.
         _, port = self.getsockname()
-        dst = ("0", port)
+        dst = ("0.0.0.0", port)
 
         self._proxyconn = _orig_socket()
         proxy = self._proxy_addr()
