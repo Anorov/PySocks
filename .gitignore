@@ -29,3 +29,6 @@ MANIFEST
 /3proxy.conf
 /.cache/
 /.env/
+
+# IDE
+.idea

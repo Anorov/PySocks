@@ -361,7 +361,9 @@ class socksocket(_BaseSocket):
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
 
     def sendto(self, bytes, *args, **kwargs):
-        if self.type != socket.SOCK_DGRAM:
+        proxy_type, addr, port, rdns, username, password = self.proxy
+
+        if self.type != socket.SOCK_DGRAM or not proxy_type:
             return super(socksocket, self).sendto(bytes, *args, **kwargs)
         if not self._proxyconn:
             self.bind(("", 0))
@@ -387,7 +389,9 @@ class socksocket(_BaseSocket):
             return super(socksocket, self).send(bytes, flags, **kwargs)
 
     def recvfrom(self, bufsize, flags=0):
-        if self.type != socket.SOCK_DGRAM:
+        proxy_type, addr, port, rdns, username, password = self.proxy
+
+        if self.type != socket.SOCK_DGRAM or not proxy_type:
             return super(socksocket, self).recvfrom(bufsize, flags)
         if not self._proxyconn:
             self.bind(("", 0))
