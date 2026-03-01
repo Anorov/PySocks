@@ -12,6 +12,7 @@ from os import SEEK_CUR
 import socket
 import struct
 import sys
+import ipaddress
 
 __version__ = "1.7.1"
 
@@ -110,7 +111,6 @@ SOCKS5_ERRORS = {
 }
 
 DEFAULT_PORTS = {SOCKS4: 1080, SOCKS5: 1080, HTTP: 8080}
-
 
 def set_default_proxy(proxy_type=None, addr=None, port=None, rdns=True,
                       username=None, password=None):
@@ -350,12 +350,23 @@ class socksocket(_BaseSocket):
         self._proxyconn.connect(proxy)
 
         UDP_ASSOCIATE = b"\x03"
-        _, relay = self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, dst)
+        ret, relay = self._SOCKS5_request(self._proxyconn, UDP_ASSOCIATE, dst)
 
-        # The relay is most likely on the same host as the SOCKS proxy,
-        # but some proxies return a private IP address (10.x.y.z)
-        host, _ = proxy
-        _, port = relay
+        # check if returned ip address is private
+        bind_ip = relay[0]
+        use_bind_ip = True
+        try:
+            bind_ip_parsed = ipaddress.ip_address(bind_ip)
+            use_bind_ip = bind_ip_parsed.is_global
+        except ValueError:
+            use_bind_ip = False
+
+        # use IP returned by relay, if it's not private, otherwise use relay's address
+        if use_bind_ip:
+            host, port = relay
+        else:
+            host, _ = proxy
+            _, port = relay
         super(socksocket, self).connect((host, port))
         super(socksocket, self).settimeout(self._timeout)
         self.proxy_sockname = ("0.0.0.0", 0)  # Unknown
