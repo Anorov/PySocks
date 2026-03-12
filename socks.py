@@ -488,9 +488,9 @@ class socksocket(_BaseSocket):
                                           "Server requested username/password"
                                           " authentication")
 
-                writer.write(b"\x01" + chr(len(username)).encode()
+                writer.write(b"\x01" + (len(username)).to_bytes()
                              + username
-                             + chr(len(password)).encode()
+                             + (len(password)).to_bytes()
                              + password)
                 writer.flush()
                 auth_status = self._readall(reader, 2)
