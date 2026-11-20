@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 SocksiPy + urllib2 handler
 
